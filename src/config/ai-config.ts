@@ -4,7 +4,7 @@ export const aiConfig = {
     baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
     modelId: 'doubao-seed-evolving',
     timeoutMs: 60_000,
-    caching: true
+    caching: false
   },
   speech: {
     appId: '',

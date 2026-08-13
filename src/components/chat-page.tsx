@@ -1,198 +1,182 @@
-"use client";
+'use client'
 
-import {
-  initSession,
-  recognizeSpeech,
-  sendMessage,
-  stopMessage,
-} from "@/api/ai-api";
-import { blobToDataUrl, recordingToWav } from "@/lib/audio";
-import type { ChatMessage, ChatStreamEvent } from "@/types/ai";
-import {
-  Bot,
-  CircleStop,
-  LoaderCircle,
-  MessageSquarePlus,
-  Mic,
-  Send,
-  SquarePen,
-  UserRound,
-} from "lucide-react";
-import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
-import "./chat-page.scss";
+import { initSession, recognizeSpeech, sendMessage, stopMessage } from '@/api/ai-api'
+import { blobToDataUrl, recordingToWav } from '@/lib/audio'
+import type { ChatMessage, ChatStreamEvent } from '@/types/ai'
+import { Bot, CircleStop, LoaderCircle, MessageSquarePlus, Mic, Send, SquarePen, UserRound } from 'lucide-react'
+import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react'
+import './chat-page.scss'
 
 const welcomeMessage: ChatMessage = {
-  id: "welcome",
-  role: "assistant",
-  content: "你好，我是 M4 智能机器人大模型。有什么可以帮你？",
+  id: 'welcome',
+  role: 'assistant',
+  content: '你好，我是 M4 智能机器人大模型。有什么可以帮你？',
   createdAt: Date.now(),
-  status: "done",
-};
+  status: 'done'
+}
 
-function createMessage(role: ChatMessage["role"], content: string): ChatMessage {
+function createMessage(role: ChatMessage['role'], content: string): ChatMessage {
   return {
     id: crypto.randomUUID(),
     role,
     content,
     createdAt: Date.now(),
-    status: role === "assistant" ? "streaming" : "done",
-  };
+    status: role === 'assistant' ? 'streaming' : 'done'
+  }
 }
 
 export function ChatPage() {
-  const [sessionId, setSessionId] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([welcomeMessage]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [initializing, setInitializing] = useState(true);
-  const [recording, setRecording] = useState(false);
-  const [recognizing, setRecognizing] = useState(false);
-  const [error, setError] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  const [sessionId, setSessionId] = useState('')
+  const [messages, setMessages] = useState<ChatMessage[]>([welcomeMessage])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [initializing, setInitializing] = useState(true)
+  const [recording, setRecording] = useState(false)
+  const [recognizing, setRecognizing] = useState(false)
+  const [error, setError] = useState('')
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const mediaStreamRef = useRef<MediaStream | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
 
   useEffect(() => {
-    startNewSession();
-    return () => mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
-  }, []);
+    startNewSession()
+    return () => mediaStreamRef.current?.getTracks().forEach(track => track.stop())
+  }, [])
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   async function startNewSession() {
-    setInitializing(true);
-    setError("");
+    setInitializing(true)
+    setError('')
     try {
-      const nextSessionId = await initSession();
-      setSessionId(nextSessionId);
-      setMessages([{ ...welcomeMessage, id: crypto.randomUUID(), createdAt: Date.now() }]);
-      setInput("");
+      const nextSessionId = await initSession()
+      setSessionId(nextSessionId)
+      setMessages([{ ...welcomeMessage, id: crypto.randomUUID(), createdAt: Date.now() }])
+      setInput('')
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : String(nextError));
+      setError(nextError instanceof Error ? nextError.message : String(nextError))
     } finally {
-      setInitializing(false);
+      setInitializing(false)
     }
   }
 
   function updateAssistantMessage(id: string, event: ChatStreamEvent) {
-    setMessages((current) =>
-      current.map((message) => {
-        if (message.id !== id) return message;
-        if (event.type === "Text") {
-          return { ...message, content: message.content + event.text };
+    setMessages(current =>
+      current.map(message => {
+        if (message.id !== id) return message
+        if (event.type === 'Text') {
+          return { ...message, content: message.content + event.text }
         }
-        if (event.type === "Error") {
+        if (event.type === 'Error') {
           return {
             ...message,
             content: message.content || event.message,
-            status: "error",
-          };
+            status: 'error'
+          }
         }
-        if (event.type === "Done") return { ...message, status: "done" };
-        return message;
-      }),
-    );
+        if (event.type === 'Done') return { ...message, status: 'done' }
+        return message
+      })
+    )
   }
 
   async function submitMessage() {
-    const content = input.trim();
-    if (!content || loading || !sessionId) return;
+    const content = input.trim()
+    if (!content || loading || !sessionId) return
 
-    const userMessage = createMessage("user", content);
-    const assistantMessage = createMessage("assistant", "");
-    setMessages((current) => [...current, userMessage, assistantMessage]);
-    setInput("");
-    setError("");
-    setLoading(true);
+    const userMessage = createMessage('user', content)
+    const assistantMessage = createMessage('assistant', '')
+    setMessages(current => [...current, userMessage, assistantMessage])
+    setInput('')
+    setError('')
+    setLoading(true)
 
     try {
-      await sendMessage(sessionId, content, (event) =>
-        updateAssistantMessage(assistantMessage.id, event),
-      );
-      setMessages((current) =>
-        current.map((message) =>
-          message.id === assistantMessage.id && message.status === "streaming"
-            ? { ...message, status: "done" }
-            : message,
-        ),
-      );
+      await sendMessage(sessionId, content, event => updateAssistantMessage(assistantMessage.id, event))
+      setMessages(current =>
+        current.map(message =>
+          message.id === assistantMessage.id && message.status === 'streaming' ? { ...message, status: 'done' } : message
+        )
+      )
     } catch (nextError) {
-      const message = nextError instanceof Error ? nextError.message : String(nextError);
-      updateAssistantMessage(assistantMessage.id, { type: "Error", message });
+      const message = nextError instanceof Error ? nextError.message : String(nextError)
+      updateAssistantMessage(assistantMessage.id, { type: 'Error', message })
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
 
   function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    submitMessage();
+    event.preventDefault()
+    submitMessage()
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === "Enter" && !event.shiftKey) {
-      event.preventDefault();
-      submitMessage();
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault()
+      submitMessage()
     }
   }
 
   async function handleStop() {
-    if (!sessionId) return;
+    if (!sessionId) return
     // 停止会话会取消服务端任务，客户端忽略由主动中断产生的请求异常。
-    await stopMessage(sessionId).catch(() => undefined);
+    await stopMessage(sessionId).catch(() => undefined)
   }
 
   async function startRecording() {
-    setError("");
+    setError('')
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { channelCount: 1, sampleRate: 16_000 },
-      });
-      const recorder = new MediaRecorder(stream);
-      audioChunksRef.current = [];
+        audio: { channelCount: 1, sampleRate: 16_000 }
+      })
+      const recorder = new MediaRecorder(stream)
+      audioChunksRef.current = []
       // MediaRecorder 通过异步回调持续收集浏览器产生的音频片段。
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) audioChunksRef.current.push(event.data);
-      };
+      recorder.ondataavailable = event => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data)
+      }
       recorder.onstop = async () => {
-        setRecognizing(true);
+        setRecognizing(true)
         try {
           // 一次语音到文本：录音结束后转为 WAV，再发送 Base64 编码音频内容。
-          const recordingBlob = new Blob(audioChunksRef.current, { type: recorder.mimeType });
-          const wavBlob = await recordingToWav(recordingBlob);
-          const text = await recognizeSpeech(await blobToDataUrl(wavBlob));
-          setInput((current) => `${current}${current && text ? " " : ""}${text}`);
+          const recordingBlob = new Blob(audioChunksRef.current, { type: recorder.mimeType })
+          const wavBlob = await recordingToWav(recordingBlob)
+          const text = await recognizeSpeech(await blobToDataUrl(wavBlob))
+          setInput(current => `${current}${current && text ? ' ' : ''}${text}`)
         } catch (nextError) {
-          setError(nextError instanceof Error ? nextError.message : String(nextError));
+          setError(nextError instanceof Error ? nextError.message : String(nextError))
         } finally {
-          setRecognizing(false);
-          stream.getTracks().forEach((track) => track.stop());
-          mediaStreamRef.current = null;
+          setRecognizing(false)
+          stream.getTracks().forEach(track => track.stop())
+          mediaStreamRef.current = null
         }
-      };
-      mediaRecorderRef.current = recorder;
-      mediaStreamRef.current = stream;
-      recorder.start();
-      setRecording(true);
+      }
+      mediaRecorderRef.current = recorder
+      mediaStreamRef.current = stream
+      recorder.start()
+      setRecording(true)
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "无法使用麦克风");
+      setError(nextError instanceof Error ? nextError.message : '无法使用麦克风')
     }
   }
 
   function stopRecording() {
-    mediaRecorderRef.current?.stop();
-    mediaRecorderRef.current = null;
-    setRecording(false);
+    mediaRecorderRef.current?.stop()
+    mediaRecorderRef.current = null
+    setRecording(false)
   }
 
   return (
     <main className="chat-page">
       <aside className="chat-sidebar">
         <div className="brand">
-          <span className="brand-mark"><Bot size={20} /></span>
+          <span className="brand-mark">
+            <Bot size={20} />
+          </span>
           <div>
             <strong>M4 AI</strong>
             <span>个人学习控制台</span>
@@ -213,10 +197,10 @@ export function ChatPage() {
         </div>
 
         <div className="sidebar-status">
-          <span className={sessionId ? "status-dot online" : "status-dot"} />
+          <span className={sessionId ? 'status-dot online' : 'status-dot'} />
           <div>
-            <strong>{sessionId ? "会话已连接" : "等待连接"}</strong>
-            <span>{sessionId ? sessionId.slice(0, 12) : "请检查项目配置"}</span>
+            <strong>{sessionId ? '会话已连接' : '等待连接'}</strong>
+            <span>{sessionId ? sessionId.slice(0, 12) : '请检查项目配置'}</span>
           </div>
         </div>
       </aside>
@@ -227,22 +211,26 @@ export function ChatPage() {
             <h1>M4 智能助手</h1>
             <p>Ark Responses API · 流式对话</p>
           </div>
-          <span className="model-badge">{initializing ? "连接中" : sessionId ? "在线" : "离线"}</span>
+          <span className="model-badge">{initializing ? '连接中' : sessionId ? '在线' : '离线'}</span>
         </header>
 
         <div className="messages">
-          {messages.map((message) => (
+          {messages.map(message => (
             <article className={`message ${message.role}`} key={message.id}>
-              <div className="message-avatar">
-                {message.role === "assistant" ? <Bot size={19} /> : <UserRound size={18} />}
-              </div>
+              <div className="message-avatar">{message.role === 'assistant' ? <Bot size={19} /> : <UserRound size={18} />}</div>
               <div className="message-body">
                 <div className="message-meta">
-                  <strong>{message.role === "assistant" ? "M4 AI" : "你"}</strong>
-                  <span>{new Date(message.createdAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}</span>
+                  <strong>{message.role === 'assistant' ? 'M4 AI' : '你'}</strong>
+                  <span>{new Date(message.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
-                <div className={`message-content ${message.status === "error" ? "error" : ""}`}>
-                  {message.content || <span className="typing-indicator"><i /><i /><i /></span>}
+                <div className={`message-content ${message.status === 'error' ? 'error' : ''}`}>
+                  {message.content || (
+                    <span className="typing-indicator">
+                      <i />
+                      <i />
+                      <i />
+                    </span>
+                  )}
                 </div>
               </div>
             </article>
@@ -255,21 +243,27 @@ export function ChatPage() {
           <form className="composer" onSubmit={handleSubmit}>
             <textarea
               value={input}
-              onChange={(event) => setInput(event.target.value)}
+              onChange={event => setInput(event.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={initializing ? "正在初始化会话..." : "输入你的问题"}
+              placeholder={initializing ? '正在初始化会话...' : '输入你的问题'}
               rows={1}
               disabled={!sessionId || initializing}
             />
             <div className="composer-actions">
               <button
-                className={`icon-button ${recording ? "recording" : ""}`}
+                className={`icon-button ${recording ? 'recording' : ''}`}
                 type="button"
-                title={recording ? "停止录音" : "语音输入"}
+                title={recording ? '停止录音' : '语音输入'}
                 onClick={recording ? stopRecording : startRecording}
                 disabled={recognizing || loading || !sessionId}
               >
-                {recognizing ? <LoaderCircle className="spin" size={19} /> : recording ? <CircleStop size={19} /> : <Mic size={19} />}
+                {recognizing ? (
+                  <LoaderCircle className="spin" size={19} />
+                ) : recording ? (
+                  <CircleStop size={19} />
+                ) : (
+                  <Mic size={19} />
+                )}
               </button>
               {loading ? (
                 <button className="stop-button" type="button" onClick={handleStop} title="停止生成">
@@ -288,5 +282,5 @@ export function ChatPage() {
         </footer>
       </section>
     </main>
-  );
+  )
 }
