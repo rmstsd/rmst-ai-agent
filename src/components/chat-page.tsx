@@ -141,6 +141,7 @@ export function ChatPage() {
 
   async function handleStop() {
     if (!sessionId) return;
+    // 停止会话会取消服务端任务，客户端忽略由主动中断产生的请求异常。
     await stopMessage(sessionId).catch(() => undefined);
   }
 
@@ -152,12 +153,14 @@ export function ChatPage() {
       });
       const recorder = new MediaRecorder(stream);
       audioChunksRef.current = [];
+      // MediaRecorder 通过异步回调持续收集浏览器产生的音频片段。
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) audioChunksRef.current.push(event.data);
       };
       recorder.onstop = async () => {
         setRecognizing(true);
         try {
+          // 一次语音到文本：录音结束后转为 WAV，再发送 Base64 编码音频内容。
           const recordingBlob = new Blob(audioChunksRef.current, { type: recorder.mimeType });
           const wavBlob = await recordingToWav(recordingBlob);
           const text = await recognizeSpeech(await blobToDataUrl(wavBlob));

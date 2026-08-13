@@ -13,10 +13,15 @@ function stripDataUrl(data: string) {
 
 export async function recognizeSpeech(data: string) {
   requireSpeechConfig();
+  // 合并基础热词和配置热词。当前项目统一由配置文件中的 hotWords 提供。
   const context = JSON.stringify({
     hotwords: aiConfig.speech.hotWords.map((word) => ({ word })),
   });
 
+  /**
+   * 一次语音到文本。
+   * data 为 Base64 编码音频内容，也支持完整的音频 Data URL。
+   */
   const response = await fetch("https://openspeech.bytedance.com/api/v3/auc/bigmodel/recognize/flash", {
     method: "POST",
     headers: {

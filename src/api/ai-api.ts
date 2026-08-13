@@ -74,6 +74,7 @@ export async function sendMessage(
     functionCalls = [];
 
     for (const call of currentCalls) {
+      // 异步回传工具调用结果，让模型基于函数输出继续生成响应。
       const nextCalls = await consumeEventStream(
         await fetch("/api/ai/call-function", {
           method: "POST",
@@ -88,6 +89,7 @@ export async function sendMessage(
 }
 
 export async function stopMessage(sessionId: string) {
+  // 是否停止对话：服务端会取消当前会话正在进行的请求。
   const response = await fetch("/api/ai/stop", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -97,6 +99,7 @@ export async function stopMessage(sessionId: string) {
 }
 
 export async function recognizeSpeech(data: string) {
+  // data 为 Base64 编码音频内容。
   const response = await fetch("/api/ai/speech-recognize", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

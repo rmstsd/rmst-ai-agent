@@ -7,6 +7,7 @@ interface ChatSession {
   id: string;
   createdAt: number;
   lastResponseId?: string;
+  /** 当前正在进行的响应，用于停止会话时取消请求。 */
   controller?: AbortController;
 }
 
@@ -28,6 +29,9 @@ interface StreamOptions {
 
 const sessions = new Map<string, ChatSession>();
 
+/**
+ * 通用大模型配置。
+ */
 function requireArkConfig() {
   if (!aiConfig.ark.apiKey || !aiConfig.ark.modelId) {
     throw new Error("请先在 src/config/ai-config.ts 中填写 Ark apiKey 和 modelId");
@@ -46,8 +50,11 @@ function buildRequestBody(input: unknown[], previousResponseId?: string, stream 
     model: aiConfig.ark.modelId,
     input,
     previous_response_id: previousResponseId,
+    // 是否开启上下文缓存，未开启时每次都需要传入 tools。
+    // 开启缓存后，首次请求才需要传入工具定义。
     tools: aiConfig.ark.caching && previousResponseId ? undefined : arkTools,
     thinking: { type: "disabled" },
+    // 是否开启上下文缓存。
     caching: { type: aiConfig.ark.caching ? "enabled" : "disabled" },
     stream,
   };
@@ -191,6 +198,7 @@ export async function streamChat({ sessionId, input, onEvent }: StreamOptions) {
       controller.signal,
     );
     await consumeSse(response, session, onEvent);
+    // 成功完成。
     onEvent({ type: "Done", responseId: session.lastResponseId });
   } finally {
     clearTimeout(timeout);
@@ -217,6 +225,7 @@ export async function streamFunctionResult(
   callId: string,
   onEvent: StreamOptions["onEvent"],
 ) {
+  // 原实现中的操作人 op 暂不下传，工具函数只接收模型参数。
   const output = await executeTool(name, args);
   return streamChat({
     sessionId,
