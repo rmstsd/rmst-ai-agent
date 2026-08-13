@@ -1,49 +1,37 @@
-interface AiTool {
-  name: string
-  description: string
-  parameters: Record<string, unknown>
-  execute: (args?: string) => Promise<string>
-}
+import { executeM4Tool, getM4Capabilities } from '@/server/m4-client'
+import { fleetAiTools } from '@/server/tools/fleet-ai-tools'
+import { logAiTools } from '@/server/tools/log-ai-tools'
+import { storeAiTools } from '@/server/tools/store-ai-tools'
+import { systemPrompts } from '@/server/system-prompts'
 
-function formatDateTime(date: Date) {
-  const formatter = new Intl.DateTimeFormat('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  })
+const tools = [...logAiTools, ...fleetAiTools, ...storeAiTools]
 
-  return formatter.format(date).replaceAll('/', '-')
-}
-
-const tools: AiTool[] = [
-  {
-    name: 'getCurrentDateTime',
-    description: '获取当前日期时间',
-    parameters: { type: 'object', properties: {}, additionalProperties: false },
-    execute: async () => formatDateTime(new Date())
+export async function loadAiCapabilities() {
+  const remoteCapabilities = await getM4Capabilities()
+  const registeredNames = new Set(remoteCapabilities.tools.map(tool => tool.name))
+  const unavailableTools = tools.filter(tool => !registeredNames.has(tool.name))
+  if (unavailableTools.length > 0) {
+    throw new Error(`M4 未注册以下 AI 工具：${unavailableTools.map(tool => tool.name).join(', ')}`)
   }
-]
 
-export const arkTools = tools.map(({ name, description, parameters }) => ({
-  type: 'function',
-  name,
-  description,
-  parameters,
-  strict: true
-}))
+  const dynamicPrompts = remoteCapabilities.systemPrompts.filter(prompt =>
+    prompt.startsWith('有以下机器人：')
+  )
+
+  return {
+    systemPrompts: [...systemPrompts, ...dynamicPrompts],
+    tools: tools.map(({ name, description, parameters }) => ({
+      type: 'function',
+      name,
+      description,
+      parameters
+    }))
+  }
+}
 
 export async function executeTool(name: string, args?: string) {
-  const tool = tools.find(item => item.name === name)
-  if (!tool) {
-    return `Failed to call function, error is Function ${name} not found`
-  }
-
   try {
-    return await tool.execute(args)
+    return await executeM4Tool(name, args)
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     return `Failed to call function, error is ${message}`

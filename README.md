@@ -14,10 +14,21 @@
 
 - `ark.apiKey`
 - `ark.modelId`
+- `m4.baseUrl`
+- `m4.appId`
+- `m4.appKey`
 - `speech.appId`
 - `speech.token`
 
 项目按学习用途直接读取该配置文件，没有把这些变量自动抽离为环境变量。提交到公开仓库前请不要填写真实密钥。
+
+`m4.appId` 和 `m4.appKey` 对应 M4 后端的 `AgentUser`。Node.js 会通过 M4 的受认证桥接接口加载并执行以下原生能力：
+
+- `FleetAiArkManager` 注册的机器人、运单和诊断工具
+- `StoreAi` 注册的库存查询工具
+- `LogAi` 注册的时间和日志工具
+
+业务判断仍在 M4 进程中执行，Next.js 不复制调度、库存和实体服务逻辑。
 
 ## 启动
 

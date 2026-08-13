@@ -1,4 +1,5 @@
 import { aiConfig } from '@/config/ai-config'
+import { getM4Capabilities } from '@/server/m4-client'
 
 function requireSpeechConfig() {
   if (!aiConfig.speech.appId || !aiConfig.speech.token) {
@@ -13,9 +14,11 @@ function stripDataUrl(data: string) {
 
 export async function recognizeSpeech(data: string) {
   requireSpeechConfig()
-  // 合并基础热词和配置热词。当前项目统一由配置文件中的 hotWords 提供。
+  // 合并基础热词、车队业务热词、机器人名和 Node 配置热词。
+  const capabilities = await getM4Capabilities()
+  const hotWords = [...new Set([...capabilities.hotWords, ...aiConfig.speech.hotWords])]
   const context = JSON.stringify({
-    hotwords: aiConfig.speech.hotWords.map(word => ({ word }))
+    hotwords: hotWords.map(word => ({ word }))
   })
 
   /**

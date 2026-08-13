@@ -1,12 +1,12 @@
 import { aiConfig } from '@/config/ai-config'
-import { arkTools, executeTool } from '@/server/ai-tools'
-import { systemPrompts } from '@/server/system-prompts'
+import { executeTool, loadAiCapabilities } from '@/server/ai-tools'
 import type { ChatStreamEvent } from '@/types/ai'
 
 interface ChatSession {
   id: string
   createdAt: number
   lastResponseId?: string
+  tools: Record<string, unknown>[]
   /** 当前正在进行的响应，用于停止会话时取消请求。 */
   controller?: AbortController
 }
@@ -45,14 +45,19 @@ function buildHeaders() {
   }
 }
 
-function buildRequestBody(input: unknown[], previousResponseId?: string, stream = true) {
+function buildRequestBody(
+  input: unknown[],
+  tools: Record<string, unknown>[],
+  previousResponseId?: string,
+  stream = true
+) {
   return {
     model: aiConfig.ark.modelId,
     input,
     previous_response_id: previousResponseId,
     // 是否开启上下文缓存，未开启时每次都需要传入 tools。
     // 开启缓存后，首次请求才需要传入工具定义。
-    tools: aiConfig.ark.caching && previousResponseId ? undefined : arkTools,
+    tools: aiConfig.ark.caching && previousResponseId ? undefined : tools,
     thinking: { type: 'disabled' },
     // 是否开启上下文缓存。
     caching: { type: aiConfig.ark.caching ? 'enabled' : 'disabled' },
@@ -82,13 +87,22 @@ function newId() {
 
 export async function createSession() {
   requireArkConfig()
+  const capabilities = await loadAiCapabilities()
 
   const session: ChatSession = {
     id: newId(),
-    createdAt: Date.now()
+    createdAt: Date.now(),
+    tools: capabilities.tools
   }
 
-  const response = await arkFetch(buildRequestBody([{ role: 'system', content: systemPrompts.join('|||') }], undefined, false))
+  const response = await arkFetch(
+    buildRequestBody(
+      [{ role: 'system', content: capabilities.systemPrompts.join('|||') }],
+      session.tools,
+      undefined,
+      false
+    )
+  )
   const result = (await response.json()) as { id?: string }
   if (!result.id) {
     throw new Error('Ark 初始化会话失败：响应中没有 id')
@@ -183,7 +197,7 @@ export async function streamChat({ sessionId, input, onEvent }: StreamOptions) {
   session.controller = controller
 
   try {
-    const response = await arkFetch(buildRequestBody(input, session.lastResponseId), controller.signal)
+    const response = await arkFetch(buildRequestBody(input, session.tools, session.lastResponseId), controller.signal)
     await consumeSse(response, session, onEvent)
     // 成功完成。
     onEvent({ type: 'Done', responseId: session.lastResponseId })
