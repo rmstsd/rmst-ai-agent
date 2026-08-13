@@ -8,8 +8,8 @@ export const aiConfig = {
   },
   m4: {
     baseUrl: 'http://127.0.0.1:5800',
-    appId: '',
-    appKey: '',
+    appId: 'x',
+    appKey: 'x',
     timeoutMs: 60_000
   },
   speech: {
