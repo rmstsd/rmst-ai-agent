@@ -34,7 +34,7 @@ export function ChatPage() {
   const [recording, setRecording] = useState(false)
   const [recognizing, setRecognizing] = useState(false)
   const [error, setError] = useState('')
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesRef = useRef<HTMLDivElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const mediaStreamRef = useRef<MediaStream | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
@@ -45,7 +45,9 @@ export function ChatPage() {
   }, [])
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const messagesElement = messagesRef.current
+    if (!messagesElement) return
+    messagesElement.scrollTop = messagesElement.scrollHeight
   }, [messages])
 
   async function startNewSession() {
@@ -214,7 +216,7 @@ export function ChatPage() {
           <span className="model-badge">{initializing ? '连接中' : sessionId ? '在线' : '离线'}</span>
         </header>
 
-        <div className="messages">
+        <div className="messages" ref={messagesRef}>
           {messages.map(message => (
             <article className={`message ${message.role}`} key={message.id}>
               <div className="message-avatar">{message.role === 'assistant' ? <Bot size={19} /> : <UserRound size={18} />}</div>
@@ -235,7 +237,6 @@ export function ChatPage() {
               </div>
             </article>
           ))}
-          <div ref={messagesEndRef} />
         </div>
 
         <footer className="composer-area">
