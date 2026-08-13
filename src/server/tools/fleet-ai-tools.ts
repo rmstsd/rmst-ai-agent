@@ -1,11 +1,5 @@
 import type { AiToolDefinition } from '@/server/tools/tool-types'
-import {
-  arrayProperty,
-  booleanProperty,
-  emptyParameters,
-  objectParameters,
-  stringProperty
-} from '@/server/tools/tool-types'
+import { arrayProperty, booleanProperty, emptyParameters, objectParameters, stringProperty } from '@/server/tools/tool-types'
 
 const robotName = stringProperty('机器人名称')
 const orderId = stringProperty('运单')
@@ -37,7 +31,8 @@ export const fleetAiTools: AiToolDefinition[] = [
   },
   {
     name: 'fetchRobotState',
-    description: '查询机器人状态。查询结果中 currentNavTaskStatus 当前路径导航的状态为 0=没有导航,2=导航中,4=已完成,5=已失败,6=已取消；task_type 导航类型为 0=没有导航,3=路径导航到站点,7=平动转动,100=其他',
+    description:
+      '查询机器人状态。查询结果中 currentNavTaskStatus 当前路径导航的状态为 0=没有导航,2=导航中,4=已完成,5=已失败,6=已取消；task_type 导航类型为 0=没有导航,3=路径导航到站点,7=平动转动,100=其他',
     parameters: robotNameParameters
   },
   {
@@ -63,7 +58,8 @@ export const fleetAiTools: AiToolDefinition[] = [
   },
   {
     name: 'robotOkToAcceptOrder',
-    description: '机器人是否可以接单、是否可以接某个单。机器人不能接单的条件：所属机器人组已禁用、机器人已禁用、不接单、离线、无控制权、交管未就绪、有故障、后台任务挂掉、低电量、刚充电，满足其中一个就不能接单。当以上条件都满足接单了，若存在空库位，才可以接业务单，否则只能接自动单。当可以接业务单条件下，cannotAcceptBusinessOrderReason 为空才可以接指定的业务单',
+    description:
+      '机器人是否可以接单、是否可以接某个单。机器人不能接单的条件：所属机器人组已禁用、机器人已禁用、不接单、离线、无控制权、交管未就绪、有故障、后台任务挂掉、低电量、刚充电，满足其中一个就不能接单。当以上条件都满足接单了，若存在空库位，才可以接业务单，否则只能接自动单。当可以接业务单条件下，cannotAcceptBusinessOrderReason 为空才可以接指定的业务单',
     parameters: objectParameters({ robotName, orderId }, ['robotName'])
   },
   {
@@ -97,10 +93,7 @@ export const fleetAiTools: AiToolDefinition[] = [
   {
     name: 'robotNotMoveReason',
     description: '机器人为啥不动',
-    parameters: objectParameters(
-      { robotNames: arrayProperty('机器人名称') },
-      ['robotNames']
-    )
+    parameters: objectParameters({ robotNames: arrayProperty('机器人名称') }, ['robotNames'])
   },
   {
     name: 'getLastTransportOrder',
@@ -135,7 +128,8 @@ export const fleetAiTools: AiToolDefinition[] = [
   },
   {
     name: 'countOrdersNum',
-    description: '统计各种类型的运单数量。可以通过故障运单的数量。或根据状态统计的数量。根据创建人统计运单的数量。可以结合这些条件。',
+    description:
+      '统计各种类型的运单数量。可以通过故障运单的数量。或根据状态统计的数量。根据创建人统计运单的数量。可以结合这些条件。',
     parameters: objectParameters(orderQueryProperties)
   },
   {
@@ -146,9 +140,6 @@ export const fleetAiTools: AiToolDefinition[] = [
   {
     name: 'orderNotContinueExecuteReason',
     description: '运单为啥没有继续执行',
-    parameters: objectParameters(
-      { orderIds: arrayProperty('运单') },
-      ['orderIds']
-    )
+    parameters: objectParameters({ orderIds: arrayProperty('运单') }, ['orderIds'])
   }
 ]

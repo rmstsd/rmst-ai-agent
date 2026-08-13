@@ -6,10 +6,7 @@ export interface AiToolDefinition {
 
 export const emptyParameters = {}
 
-export function objectParameters(
-  properties: Record<string, Record<string, unknown>>,
-  required: string[] = []
-) {
+export function objectParameters(properties: Record<string, Record<string, unknown>>, required: string[] = []) {
   return {
     type: 'object',
     properties,

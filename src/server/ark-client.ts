@@ -45,12 +45,7 @@ function buildHeaders() {
   }
 }
 
-function buildRequestBody(
-  input: unknown[],
-  tools: Record<string, unknown>[],
-  previousResponseId?: string,
-  stream = true
-) {
+function buildRequestBody(input: unknown[], tools: Record<string, unknown>[], previousResponseId?: string, stream = true) {
   return {
     model: aiConfig.ark.modelId,
     input,
@@ -96,12 +91,7 @@ export async function createSession() {
   }
 
   const response = await arkFetch(
-    buildRequestBody(
-      [{ role: 'system', content: capabilities.systemPrompts.join('|||') }],
-      session.tools,
-      undefined,
-      false
-    )
+    buildRequestBody([{ role: 'system', content: capabilities.systemPrompts.join('|||') }], session.tools, undefined, false)
   )
   const result = (await response.json()) as { id?: string }
   if (!result.id) {
