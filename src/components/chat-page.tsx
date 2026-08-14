@@ -54,6 +54,12 @@ export function ChatPage() {
     setInitializing(true)
     setError('')
     try {
+      await fetch('/api/bookmark', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(await window.rmst.getBookmarks())
+      })
+
       const nextSessionId = await initSession()
       setSessionId(nextSessionId)
       setMessages([{ ...welcomeMessage, id: crypto.randomUUID(), createdAt: Date.now() }])

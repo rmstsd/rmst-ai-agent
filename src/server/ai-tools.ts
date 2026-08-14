@@ -6,13 +6,15 @@ import { systemPrompts } from '@/server/system-prompts'
 import { writeFileSync } from 'fs'
 import { githubAiTools, GithubCapabilities } from './tools/github-ai-tools'
 import { githubToolsMap } from './github/server'
+import { bookmarkToolsMap } from './github/bookmark'
+import { bookmarkAiTools, BookmarkCapabilities } from './tools/bookmark-ai-tools'
 
-const tools = [...logAiTools, ...fleetAiTools, ...storeAiTools, ...githubAiTools]
+const tools = [...logAiTools, ...fleetAiTools, ...storeAiTools, ...githubAiTools, ...bookmarkAiTools]
 
 export async function loadAiCapabilities() {
   const remoteCapabilities = await getM4Capabilities()
 
-  remoteCapabilities.tools.push(...GithubCapabilities.tools)
+  remoteCapabilities.tools.push(...GithubCapabilities.tools, ...BookmarkCapabilities.tools)
 
   writeFileSync('m4-capabilities.json', JSON.stringify(remoteCapabilities, null, 2))
   const registeredNames = new Set(remoteCapabilities.tools.map(tool => tool.name))
@@ -41,6 +43,10 @@ export async function executeTool(name: string, args?: string) {
     if (name.startsWith('git_')) {
       name = name.replace('git_', '')
       return await githubToolsMap[name](JSON.parse(args || '{}'))
+    }
+    if (name.startsWith('bookmark_')) {
+      name = name.replace('bookmark_', '')
+      return await bookmarkToolsMap[name](JSON.parse(args || '{}'))
     }
 
     return await executeM4Tool(name, args)
