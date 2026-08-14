@@ -1,0 +1,1522 @@
+[
+  {
+    "type": "response.created",
+    "response": {
+      "created_at": 1786688491,
+      "id": "resp_021786688490571031cf6218c12fc0ace26887030dd7ea8688fd0",
+      "max_output_tokens": 32768,
+      "model": "doubao-seed-2-0-mini-260428",
+      "object": "response",
+      "previous_response_id": "resp_021786688487192031cf6218c12fc0ace26887030dd7ea856185a",
+      "thinking": {
+        "type": "disabled"
+      },
+      "service_tier": "default",
+      "tools": [
+        {
+          "name": "getCurrentDateTime",
+          "type": "function",
+          "description": "获取当前日期时间",
+          "parameters": {}
+        },
+        {
+          "name": "collectLog",
+          "type": "function",
+          "description": "根据关键字、开始结束时间，收集相关日志，用于问题分析。如果用户未指定开始结束时间，取最近一小时。尽量先调用工具 getCurrentDateTime 获取当前时间",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "keywords": {
+                "type": "string",
+                "description": "关键字。|分隔多个关键字。必须提供。最好是机器人名、运单号、任务ID、门电梯等设备编号"
+              },
+              "fromDateTime": {
+                "type": "string",
+                "description": "开始日期时间。注意要精确的秒。"
+              },
+              "toDateTime": {
+                "type": "string",
+                "description": "结束日期时间。注意要精确的秒。"
+              }
+            },
+            "required": [
+              "keywords"
+            ]
+          }
+        },
+        {
+          "name": "getFaultRobots",
+          "type": "function",
+          "description": "列出故障的机器人",
+          "parameters": {}
+        },
+        {
+          "name": "retryFaultRobots",
+          "type": "function",
+          "description": "重试故障的机器人。尝试清除故障，重新执行故障的运单。",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robots": {
+                "type": "string",
+                "description": "机器人名称，可以传多个，|分隔"
+              }
+            },
+            "required": []
+          }
+        },
+        {
+          "name": "fetchRobotState",
+          "type": "function",
+          "description": "查询机器人状态。查询结果中 currentNavTaskStatus 当前路径导航的状态为 0=没有导航,2=导航中,4=已完成,5=已失败,6=已取消；task_type 导航类型为 0=没有导航,3=路径导航到站点,7=平动转动,100=其他",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robotName": {
+                "type": "string",
+                "description": "机器人名称"
+              }
+            },
+            "required": [
+              "robotName"
+            ]
+          }
+        },
+        {
+          "name": "createRobotMoveOrder",
+          "type": "function",
+          "description": "让机器人移动到指定点位",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robotName": {
+                "type": "string",
+                "description": "机器人名称"
+              },
+              "toLocation": {
+                "type": "string",
+                "description": "终点位置（点位或库位）"
+              }
+            },
+            "required": [
+              "robotName",
+              "toLocation"
+            ]
+          }
+        },
+        {
+          "name": "robotGoToPark",
+          "type": "function",
+          "description": "让机器人去停靠",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robotName": {
+                "type": "string",
+                "description": "机器人名称"
+              }
+            },
+            "required": [
+              "robotName"
+            ]
+          }
+        },
+        {
+          "name": "robotGoToCharge",
+          "type": "function",
+          "description": "让机器人去充电",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robotName": {
+                "type": "string",
+                "description": "机器人名称"
+              }
+            },
+            "required": [
+              "robotName"
+            ]
+          }
+        },
+        {
+          "name": "robotOkToAcceptOrder",
+          "type": "function",
+          "description": "机器人是否可以接单、是否可以接某个单。机器人不能接单的条件：所属机器人组已禁用、机器人已禁用、不接单、离线、无控制权、交管未就绪、有故障、后台任务挂掉、低电量、刚充电，满足其中一个就不能接单。当以上条件都满足接单了，若存在空库位，才可以接业务单，否则只能接自动单。当可以接业务单条件下，cannotAcceptBusinessOrderReason 为空才可以接指定的业务单",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robotName": {
+                "type": "string",
+                "description": "机器人名称"
+              },
+              "orderId": {
+                "type": "string",
+                "description": "运单"
+              }
+            },
+            "required": [
+              "robotName"
+            ]
+          }
+        },
+        {
+          "name": "robotNeedToCharging",
+          "type": "function",
+          "description": "机器人是否需要充电、是否可以充电、为啥没有去充电",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robotName": {
+                "type": "string",
+                "description": "机器人名称"
+              }
+            },
+            "required": [
+              "robotName"
+            ]
+          }
+        },
+        {
+          "name": "robotNeedToParking",
+          "type": "function",
+          "description": "机器人是否需要停靠、是否可以停靠、为啥没有去停靠",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robotName": {
+                "type": "string",
+                "description": "机器人名称"
+              }
+            },
+            "required": [
+              "robotName"
+            ]
+          }
+        },
+        {
+          "name": "clearRobotAlarms",
+          "type": "function",
+          "description": "清除机器人告警",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robotNames": {
+                "type": "array",
+                "description": "机器人名称，可不指定，若不指定则自动清除告警的机器人"
+              }
+            },
+            "required": []
+          }
+        },
+        {
+          "name": "robotCanReachLocation",
+          "type": "function",
+          "description": "机器人是否可以到达某个点位或库位",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robotNames": {
+                "type": "array",
+                "description": "机器人名称"
+              },
+              "location": {
+                "type": "string",
+                "description": "点位或库位"
+              }
+            },
+            "required": [
+              "robotNames",
+              "location"
+            ]
+          }
+        },
+        {
+          "name": "robotNotMoveReason",
+          "type": "function",
+          "description": "机器人为啥不动",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robotNames": {
+                "type": "array",
+                "description": "机器人名称"
+              }
+            },
+            "required": [
+              "robotNames"
+            ]
+          }
+        },
+        {
+          "name": "getLastTransportOrder",
+          "type": "function",
+          "description": "获取最新下发的一笔运单",
+          "parameters": {}
+        },
+        {
+          "name": "createLoadUnloadTransportOrder",
+          "type": "function",
+          "description": "将货物从一个位置搬到另一个位置",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "fromLocation": {
+                "type": "string",
+                "description": "起点位置（点位或库位）"
+              },
+              "toLocation": {
+                "type": "string",
+                "description": "终点位置（点位或库位）"
+              }
+            },
+            "required": [
+              "fromLocation",
+              "toLocation"
+            ]
+          }
+        },
+        {
+          "name": "orderStepTimeToComplete",
+          "type": "function",
+          "description": "运单当前步骤还有多久完成",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "orderId": {
+                "type": "string",
+                "description": "运单"
+              }
+            },
+            "required": [
+              "orderId"
+            ]
+          }
+        },
+        {
+          "name": "whyOrderNotAllocated",
+          "type": "function",
+          "description": "运单为什么没有机器人接",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "orderId": {
+                "type": "string",
+                "description": "运单"
+              }
+            },
+            "required": [
+              "orderId"
+            ]
+          }
+        },
+        {
+          "name": "orderTimeToComplete",
+          "type": "function",
+          "description": "运单还有多久完成",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "orderId": {
+                "type": "string",
+                "description": "运单"
+              }
+            },
+            "required": [
+              "orderId"
+            ]
+          }
+        },
+        {
+          "name": "countOrdersNum",
+          "type": "function",
+          "description": "统计各种类型的运单数量。可以通过故障运单的数量。或根据状态统计的数量。根据创建人统计运单的数量。可以结合这些条件。",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "orderId": {
+                "type": "string",
+                "description": "运单，支持模糊搜索"
+              },
+              "fault": {
+                "type": "boolean",
+                "description": "运单是否故障"
+              },
+              "statusList": {
+                "type": "array",
+                "description": "状态，支持查询多个"
+              },
+              "createdOnStart": {
+                "type": "string",
+                "description": "查询创建时间的起始时间点"
+              },
+              "createdOnEnd": {
+                "type": "string",
+                "description": "查询创建时间的结束时间点"
+              },
+              "createdBy": {
+                "type": "string",
+                "description": "创建人"
+              }
+            },
+            "required": []
+          }
+        },
+        {
+          "name": "queryOrders",
+          "type": "function",
+          "description": "运单查询，批量查询运单的详细数据",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "orderId": {
+                "type": "string",
+                "description": "运单，支持模糊搜索"
+              },
+              "fault": {
+                "type": "boolean",
+                "description": "运单是否故障"
+              },
+              "statusList": {
+                "type": "array",
+                "description": "状态，支持查询多个"
+              },
+              "createdOnStart": {
+                "type": "string",
+                "description": "查询创建时间的起始时间点"
+              },
+              "createdOnEnd": {
+                "type": "string",
+                "description": "查询创建时间的结束时间点"
+              },
+              "createdBy": {
+                "type": "string",
+                "description": "创建人"
+              }
+            },
+            "required": []
+          }
+        },
+        {
+          "name": "orderNotContinueExecuteReason",
+          "type": "function",
+          "description": "运单为啥没有继续执行",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "orderIds": {
+                "type": "array",
+                "description": "运单"
+              }
+            },
+            "required": [
+              "orderIds"
+            ]
+          }
+        },
+        {
+          "name": "listInventoryOfMaterial",
+          "type": "function",
+          "description": "查询一个物料（货物）的库存明细，根据物料编号或名称，一般只需指定一个，但不能都不指定",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "materialId": {
+                "type": "string",
+                "description": "物料编号，或者说物料 ID"
+              },
+              "materialName": {
+                "type": "string",
+                "description": "物料名称，支持模糊查询"
+              }
+            },
+            "required": []
+          }
+        },
+        {
+          "name": "git_setRepoPrivate",
+          "type": "function",
+          "description": "设置 github 仓库为私有或者公开",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "repo 名称"
+              },
+              "visibility": {
+                "type": "string",
+                "description": "仓库可见性。public 或 private"
+              }
+            },
+            "required": [
+              "可见性"
+            ]
+          }
+        }
+      ],
+      "caching": {
+        "type": "disabled"
+      },
+      "store": true,
+      "expire_at": 1786947690
+    },
+    "sequence_number": 0
+  },
+  {
+    "type": "response.in_progress",
+    "response": {
+      "created_at": 1786688491,
+      "id": "resp_021786688490571031cf6218c12fc0ace26887030dd7ea8688fd0",
+      "max_output_tokens": 32768,
+      "model": "doubao-seed-2-0-mini-260428",
+      "object": "response",
+      "previous_response_id": "resp_021786688487192031cf6218c12fc0ace26887030dd7ea856185a",
+      "thinking": {
+        "type": "disabled"
+      },
+      "service_tier": "default",
+      "tools": [
+        {
+          "name": "getCurrentDateTime",
+          "type": "function",
+          "description": "获取当前日期时间",
+          "parameters": {}
+        },
+        {
+          "name": "collectLog",
+          "type": "function",
+          "description": "根据关键字、开始结束时间，收集相关日志，用于问题分析。如果用户未指定开始结束时间，取最近一小时。尽量先调用工具 getCurrentDateTime 获取当前时间",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "keywords": {
+                "type": "string",
+                "description": "关键字。|分隔多个关键字。必须提供。最好是机器人名、运单号、任务ID、门电梯等设备编号"
+              },
+              "fromDateTime": {
+                "type": "string",
+                "description": "开始日期时间。注意要精确的秒。"
+              },
+              "toDateTime": {
+                "type": "string",
+                "description": "结束日期时间。注意要精确的秒。"
+              }
+            },
+            "required": [
+              "keywords"
+            ]
+          }
+        },
+        {
+          "name": "getFaultRobots",
+          "type": "function",
+          "description": "列出故障的机器人",
+          "parameters": {}
+        },
+        {
+          "name": "retryFaultRobots",
+          "type": "function",
+          "description": "重试故障的机器人。尝试清除故障，重新执行故障的运单。",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robots": {
+                "type": "string",
+                "description": "机器人名称，可以传多个，|分隔"
+              }
+            },
+            "required": []
+          }
+        },
+        {
+          "name": "fetchRobotState",
+          "type": "function",
+          "description": "查询机器人状态。查询结果中 currentNavTaskStatus 当前路径导航的状态为 0=没有导航,2=导航中,4=已完成,5=已失败,6=已取消；task_type 导航类型为 0=没有导航,3=路径导航到站点,7=平动转动,100=其他",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robotName": {
+                "type": "string",
+                "description": "机器人名称"
+              }
+            },
+            "required": [
+              "robotName"
+            ]
+          }
+        },
+        {
+          "name": "createRobotMoveOrder",
+          "type": "function",
+          "description": "让机器人移动到指定点位",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robotName": {
+                "type": "string",
+                "description": "机器人名称"
+              },
+              "toLocation": {
+                "type": "string",
+                "description": "终点位置（点位或库位）"
+              }
+            },
+            "required": [
+              "robotName",
+              "toLocation"
+            ]
+          }
+        },
+        {
+          "name": "robotGoToPark",
+          "type": "function",
+          "description": "让机器人去停靠",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robotName": {
+                "type": "string",
+                "description": "机器人名称"
+              }
+            },
+            "required": [
+              "robotName"
+            ]
+          }
+        },
+        {
+          "name": "robotGoToCharge",
+          "type": "function",
+          "description": "让机器人去充电",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robotName": {
+                "type": "string",
+                "description": "机器人名称"
+              }
+            },
+            "required": [
+              "robotName"
+            ]
+          }
+        },
+        {
+          "name": "robotOkToAcceptOrder",
+          "type": "function",
+          "description": "机器人是否可以接单、是否可以接某个单。机器人不能接单的条件：所属机器人组已禁用、机器人已禁用、不接单、离线、无控制权、交管未就绪、有故障、后台任务挂掉、低电量、刚充电，满足其中一个就不能接单。当以上条件都满足接单了，若存在空库位，才可以接业务单，否则只能接自动单。当可以接业务单条件下，cannotAcceptBusinessOrderReason 为空才可以接指定的业务单",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robotName": {
+                "type": "string",
+                "description": "机器人名称"
+              },
+              "orderId": {
+                "type": "string",
+                "description": "运单"
+              }
+            },
+            "required": [
+              "robotName"
+            ]
+          }
+        },
+        {
+          "name": "robotNeedToCharging",
+          "type": "function",
+          "description": "机器人是否需要充电、是否可以充电、为啥没有去充电",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robotName": {
+                "type": "string",
+                "description": "机器人名称"
+              }
+            },
+            "required": [
+              "robotName"
+            ]
+          }
+        },
+        {
+          "name": "robotNeedToParking",
+          "type": "function",
+          "description": "机器人是否需要停靠、是否可以停靠、为啥没有去停靠",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robotName": {
+                "type": "string",
+                "description": "机器人名称"
+              }
+            },
+            "required": [
+              "robotName"
+            ]
+          }
+        },
+        {
+          "name": "clearRobotAlarms",
+          "type": "function",
+          "description": "清除机器人告警",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robotNames": {
+                "type": "array",
+                "description": "机器人名称，可不指定，若不指定则自动清除告警的机器人"
+              }
+            },
+            "required": []
+          }
+        },
+        {
+          "name": "robotCanReachLocation",
+          "type": "function",
+          "description": "机器人是否可以到达某个点位或库位",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robotNames": {
+                "type": "array",
+                "description": "机器人名称"
+              },
+              "location": {
+                "type": "string",
+                "description": "点位或库位"
+              }
+            },
+            "required": [
+              "robotNames",
+              "location"
+            ]
+          }
+        },
+        {
+          "name": "robotNotMoveReason",
+          "type": "function",
+          "description": "机器人为啥不动",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robotNames": {
+                "type": "array",
+                "description": "机器人名称"
+              }
+            },
+            "required": [
+              "robotNames"
+            ]
+          }
+        },
+        {
+          "name": "getLastTransportOrder",
+          "type": "function",
+          "description": "获取最新下发的一笔运单",
+          "parameters": {}
+        },
+        {
+          "name": "createLoadUnloadTransportOrder",
+          "type": "function",
+          "description": "将货物从一个位置搬到另一个位置",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "fromLocation": {
+                "type": "string",
+                "description": "起点位置（点位或库位）"
+              },
+              "toLocation": {
+                "type": "string",
+                "description": "终点位置（点位或库位）"
+              }
+            },
+            "required": [
+              "fromLocation",
+              "toLocation"
+            ]
+          }
+        },
+        {
+          "name": "orderStepTimeToComplete",
+          "type": "function",
+          "description": "运单当前步骤还有多久完成",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "orderId": {
+                "type": "string",
+                "description": "运单"
+              }
+            },
+            "required": [
+              "orderId"
+            ]
+          }
+        },
+        {
+          "name": "whyOrderNotAllocated",
+          "type": "function",
+          "description": "运单为什么没有机器人接",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "orderId": {
+                "type": "string",
+                "description": "运单"
+              }
+            },
+            "required": [
+              "orderId"
+            ]
+          }
+        },
+        {
+          "name": "orderTimeToComplete",
+          "type": "function",
+          "description": "运单还有多久完成",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "orderId": {
+                "type": "string",
+                "description": "运单"
+              }
+            },
+            "required": [
+              "orderId"
+            ]
+          }
+        },
+        {
+          "name": "countOrdersNum",
+          "type": "function",
+          "description": "统计各种类型的运单数量。可以通过故障运单的数量。或根据状态统计的数量。根据创建人统计运单的数量。可以结合这些条件。",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "orderId": {
+                "type": "string",
+                "description": "运单，支持模糊搜索"
+              },
+              "fault": {
+                "type": "boolean",
+                "description": "运单是否故障"
+              },
+              "statusList": {
+                "type": "array",
+                "description": "状态，支持查询多个"
+              },
+              "createdOnStart": {
+                "type": "string",
+                "description": "查询创建时间的起始时间点"
+              },
+              "createdOnEnd": {
+                "type": "string",
+                "description": "查询创建时间的结束时间点"
+              },
+              "createdBy": {
+                "type": "string",
+                "description": "创建人"
+              }
+            },
+            "required": []
+          }
+        },
+        {
+          "name": "queryOrders",
+          "type": "function",
+          "description": "运单查询，批量查询运单的详细数据",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "orderId": {
+                "type": "string",
+                "description": "运单，支持模糊搜索"
+              },
+              "fault": {
+                "type": "boolean",
+                "description": "运单是否故障"
+              },
+              "statusList": {
+                "type": "array",
+                "description": "状态，支持查询多个"
+              },
+              "createdOnStart": {
+                "type": "string",
+                "description": "查询创建时间的起始时间点"
+              },
+              "createdOnEnd": {
+                "type": "string",
+                "description": "查询创建时间的结束时间点"
+              },
+              "createdBy": {
+                "type": "string",
+                "description": "创建人"
+              }
+            },
+            "required": []
+          }
+        },
+        {
+          "name": "orderNotContinueExecuteReason",
+          "type": "function",
+          "description": "运单为啥没有继续执行",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "orderIds": {
+                "type": "array",
+                "description": "运单"
+              }
+            },
+            "required": [
+              "orderIds"
+            ]
+          }
+        },
+        {
+          "name": "listInventoryOfMaterial",
+          "type": "function",
+          "description": "查询一个物料（货物）的库存明细，根据物料编号或名称，一般只需指定一个，但不能都不指定",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "materialId": {
+                "type": "string",
+                "description": "物料编号，或者说物料 ID"
+              },
+              "materialName": {
+                "type": "string",
+                "description": "物料名称，支持模糊查询"
+              }
+            },
+            "required": []
+          }
+        },
+        {
+          "name": "git_setRepoPrivate",
+          "type": "function",
+          "description": "设置 github 仓库为私有或者公开",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "repo 名称"
+              },
+              "visibility": {
+                "type": "string",
+                "description": "仓库可见性。public 或 private"
+              }
+            },
+            "required": [
+              "可见性"
+            ]
+          }
+        }
+      ],
+      "caching": {
+        "type": "disabled"
+      },
+      "store": true,
+      "expire_at": 1786947690
+    },
+    "sequence_number": 1
+  },
+  {
+    "type": "response.output_item.added",
+    "output_index": 0,
+    "item": {
+      "call_id": "call_fvaweuze2q50gzdi3ak857so",
+      "name": "git_setRepoPrivate",
+      "type": "function_call",
+      "id": "fc_02178668849150500000000000000000000ffffac1541e22c4602",
+      "status": "in_progress"
+    },
+    "sequence_number": 2
+  },
+  {
+    "type": "response.function_call_arguments.delta",
+    "delta": "",
+    "item_id": "fc_02178668849150500000000000000000000ffffac1541e22c4602",
+    "output_index": 0,
+    "sequence_number": 3
+  },
+  {
+    "type": "response.function_call_arguments.delta",
+    "delta": "{\"repo\": \"",
+    "item_id": "fc_02178668849150500000000000000000000ffffac1541e22c4602",
+    "output_index": 0,
+    "sequence_number": 4
+  },
+  {
+    "type": "response.function_call_arguments.delta",
+    "delta": "rm",
+    "item_id": "fc_02178668849150500000000000000000000ffffac1541e22c4602",
+    "output_index": 0,
+    "sequence_number": 5
+  },
+  {
+    "type": "response.function_call_arguments.delta",
+    "delta": "st",
+    "item_id": "fc_02178668849150500000000000000000000ffffac1541e22c4602",
+    "output_index": 0,
+    "sequence_number": 6
+  },
+  {
+    "type": "response.function_call_arguments.delta",
+    "delta": "-s",
+    "item_id": "fc_02178668849150500000000000000000000ffffac1541e22c4602",
+    "output_index": 0,
+    "sequence_number": 7
+  },
+  {
+    "type": "response.function_call_arguments.delta",
+    "delta": "d",
+    "item_id": "fc_02178668849150500000000000000000000ffffac1541e22c4602",
+    "output_index": 0,
+    "sequence_number": 8
+  },
+  {
+    "type": "response.function_call_arguments.delta",
+    "delta": "\"",
+    "item_id": "fc_02178668849150500000000000000000000ffffac1541e22c4602",
+    "output_index": 0,
+    "sequence_number": 9
+  },
+  {
+    "type": "response.function_call_arguments.delta",
+    "delta": ", \"visibility\": \"",
+    "item_id": "fc_02178668849150500000000000000000000ffffac1541e22c4602",
+    "output_index": 0,
+    "sequence_number": 10
+  },
+  {
+    "type": "response.function_call_arguments.delta",
+    "delta": "private",
+    "item_id": "fc_02178668849150500000000000000000000ffffac1541e22c4602",
+    "output_index": 0,
+    "sequence_number": 11
+  },
+  {
+    "type": "response.function_call_arguments.delta",
+    "delta": "\"",
+    "item_id": "fc_02178668849150500000000000000000000ffffac1541e22c4602",
+    "output_index": 0,
+    "sequence_number": 12
+  },
+  {
+    "type": "response.function_call_arguments.delta",
+    "delta": "}",
+    "item_id": "fc_02178668849150500000000000000000000ffffac1541e22c4602",
+    "output_index": 0,
+    "sequence_number": 13
+  },
+  {
+    "type": "response.function_call_arguments.done",
+    "item_id": "fc_02178668849150500000000000000000000ffffac1541e22c4602",
+    "output_index": 0,
+    "arguments": "{\"repo\": \"rmst-sd\", \"visibility\": \"private\"}",
+    "sequence_number": 14
+  },
+  {
+    "type": "response.output_item.done",
+    "output_index": 0,
+    "item": {
+      "arguments": "{\"repo\": \"rmst-sd\", \"visibility\": \"private\"}",
+      "call_id": "call_fvaweuze2q50gzdi3ak857so",
+      "name": "git_setRepoPrivate",
+      "type": "function_call",
+      "id": "fc_02178668849150500000000000000000000ffffac1541e22c4602",
+      "status": "completed"
+    },
+    "sequence_number": 15
+  },
+  {
+    "type": "response.completed",
+    "response": {
+      "created_at": 1786688491,
+      "id": "resp_021786688490571031cf6218c12fc0ace26887030dd7ea8688fd0",
+      "max_output_tokens": 32768,
+      "model": "doubao-seed-2-0-mini-260428",
+      "object": "response",
+      "output": [
+        {
+          "arguments": "{\"repo\": \"rmst-sd\", \"visibility\": \"private\"}",
+          "call_id": "call_fvaweuze2q50gzdi3ak857so",
+          "name": "git_setRepoPrivate",
+          "type": "function_call",
+          "id": "fc_02178668849150500000000000000000000ffffac1541e22c4602",
+          "status": "completed"
+        }
+      ],
+      "previous_response_id": "resp_021786688487192031cf6218c12fc0ace26887030dd7ea856185a",
+      "thinking": {
+        "type": "disabled"
+      },
+      "service_tier": "default",
+      "status": "completed",
+      "tools": [
+        {
+          "name": "getCurrentDateTime",
+          "type": "function",
+          "description": "获取当前日期时间",
+          "parameters": {}
+        },
+        {
+          "name": "collectLog",
+          "type": "function",
+          "description": "根据关键字、开始结束时间，收集相关日志，用于问题分析。如果用户未指定开始结束时间，取最近一小时。尽量先调用工具 getCurrentDateTime 获取当前时间",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "keywords": {
+                "type": "string",
+                "description": "关键字。|分隔多个关键字。必须提供。最好是机器人名、运单号、任务ID、门电梯等设备编号"
+              },
+              "fromDateTime": {
+                "type": "string",
+                "description": "开始日期时间。注意要精确的秒。"
+              },
+              "toDateTime": {
+                "type": "string",
+                "description": "结束日期时间。注意要精确的秒。"
+              }
+            },
+            "required": [
+              "keywords"
+            ]
+          }
+        },
+        {
+          "name": "getFaultRobots",
+          "type": "function",
+          "description": "列出故障的机器人",
+          "parameters": {}
+        },
+        {
+          "name": "retryFaultRobots",
+          "type": "function",
+          "description": "重试故障的机器人。尝试清除故障，重新执行故障的运单。",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robots": {
+                "type": "string",
+                "description": "机器人名称，可以传多个，|分隔"
+              }
+            },
+            "required": []
+          }
+        },
+        {
+          "name": "fetchRobotState",
+          "type": "function",
+          "description": "查询机器人状态。查询结果中 currentNavTaskStatus 当前路径导航的状态为 0=没有导航,2=导航中,4=已完成,5=已失败,6=已取消；task_type 导航类型为 0=没有导航,3=路径导航到站点,7=平动转动,100=其他",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robotName": {
+                "type": "string",
+                "description": "机器人名称"
+              }
+            },
+            "required": [
+              "robotName"
+            ]
+          }
+        },
+        {
+          "name": "createRobotMoveOrder",
+          "type": "function",
+          "description": "让机器人移动到指定点位",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robotName": {
+                "type": "string",
+                "description": "机器人名称"
+              },
+              "toLocation": {
+                "type": "string",
+                "description": "终点位置（点位或库位）"
+              }
+            },
+            "required": [
+              "robotName",
+              "toLocation"
+            ]
+          }
+        },
+        {
+          "name": "robotGoToPark",
+          "type": "function",
+          "description": "让机器人去停靠",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robotName": {
+                "type": "string",
+                "description": "机器人名称"
+              }
+            },
+            "required": [
+              "robotName"
+            ]
+          }
+        },
+        {
+          "name": "robotGoToCharge",
+          "type": "function",
+          "description": "让机器人去充电",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robotName": {
+                "type": "string",
+                "description": "机器人名称"
+              }
+            },
+            "required": [
+              "robotName"
+            ]
+          }
+        },
+        {
+          "name": "robotOkToAcceptOrder",
+          "type": "function",
+          "description": "机器人是否可以接单、是否可以接某个单。机器人不能接单的条件：所属机器人组已禁用、机器人已禁用、不接单、离线、无控制权、交管未就绪、有故障、后台任务挂掉、低电量、刚充电，满足其中一个就不能接单。当以上条件都满足接单了，若存在空库位，才可以接业务单，否则只能接自动单。当可以接业务单条件下，cannotAcceptBusinessOrderReason 为空才可以接指定的业务单",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robotName": {
+                "type": "string",
+                "description": "机器人名称"
+              },
+              "orderId": {
+                "type": "string",
+                "description": "运单"
+              }
+            },
+            "required": [
+              "robotName"
+            ]
+          }
+        },
+        {
+          "name": "robotNeedToCharging",
+          "type": "function",
+          "description": "机器人是否需要充电、是否可以充电、为啥没有去充电",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robotName": {
+                "type": "string",
+                "description": "机器人名称"
+              }
+            },
+            "required": [
+              "robotName"
+            ]
+          }
+        },
+        {
+          "name": "robotNeedToParking",
+          "type": "function",
+          "description": "机器人是否需要停靠、是否可以停靠、为啥没有去停靠",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robotName": {
+                "type": "string",
+                "description": "机器人名称"
+              }
+            },
+            "required": [
+              "robotName"
+            ]
+          }
+        },
+        {
+          "name": "clearRobotAlarms",
+          "type": "function",
+          "description": "清除机器人告警",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robotNames": {
+                "type": "array",
+                "description": "机器人名称，可不指定，若不指定则自动清除告警的机器人"
+              }
+            },
+            "required": []
+          }
+        },
+        {
+          "name": "robotCanReachLocation",
+          "type": "function",
+          "description": "机器人是否可以到达某个点位或库位",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robotNames": {
+                "type": "array",
+                "description": "机器人名称"
+              },
+              "location": {
+                "type": "string",
+                "description": "点位或库位"
+              }
+            },
+            "required": [
+              "robotNames",
+              "location"
+            ]
+          }
+        },
+        {
+          "name": "robotNotMoveReason",
+          "type": "function",
+          "description": "机器人为啥不动",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "robotNames": {
+                "type": "array",
+                "description": "机器人名称"
+              }
+            },
+            "required": [
+              "robotNames"
+            ]
+          }
+        },
+        {
+          "name": "getLastTransportOrder",
+          "type": "function",
+          "description": "获取最新下发的一笔运单",
+          "parameters": {}
+        },
+        {
+          "name": "createLoadUnloadTransportOrder",
+          "type": "function",
+          "description": "将货物从一个位置搬到另一个位置",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "fromLocation": {
+                "type": "string",
+                "description": "起点位置（点位或库位）"
+              },
+              "toLocation": {
+                "type": "string",
+                "description": "终点位置（点位或库位）"
+              }
+            },
+            "required": [
+              "fromLocation",
+              "toLocation"
+            ]
+          }
+        },
+        {
+          "name": "orderStepTimeToComplete",
+          "type": "function",
+          "description": "运单当前步骤还有多久完成",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "orderId": {
+                "type": "string",
+                "description": "运单"
+              }
+            },
+            "required": [
+              "orderId"
+            ]
+          }
+        },
+        {
+          "name": "whyOrderNotAllocated",
+          "type": "function",
+          "description": "运单为什么没有机器人接",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "orderId": {
+                "type": "string",
+                "description": "运单"
+              }
+            },
+            "required": [
+              "orderId"
+            ]
+          }
+        },
+        {
+          "name": "orderTimeToComplete",
+          "type": "function",
+          "description": "运单还有多久完成",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "orderId": {
+                "type": "string",
+                "description": "运单"
+              }
+            },
+            "required": [
+              "orderId"
+            ]
+          }
+        },
+        {
+          "name": "countOrdersNum",
+          "type": "function",
+          "description": "统计各种类型的运单数量。可以通过故障运单的数量。或根据状态统计的数量。根据创建人统计运单的数量。可以结合这些条件。",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "orderId": {
+                "type": "string",
+                "description": "运单，支持模糊搜索"
+              },
+              "fault": {
+                "type": "boolean",
+                "description": "运单是否故障"
+              },
+              "statusList": {
+                "type": "array",
+                "description": "状态，支持查询多个"
+              },
+              "createdOnStart": {
+                "type": "string",
+                "description": "查询创建时间的起始时间点"
+              },
+              "createdOnEnd": {
+                "type": "string",
+                "description": "查询创建时间的结束时间点"
+              },
+              "createdBy": {
+                "type": "string",
+                "description": "创建人"
+              }
+            },
+            "required": []
+          }
+        },
+        {
+          "name": "queryOrders",
+          "type": "function",
+          "description": "运单查询，批量查询运单的详细数据",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "orderId": {
+                "type": "string",
+                "description": "运单，支持模糊搜索"
+              },
+              "fault": {
+                "type": "boolean",
+                "description": "运单是否故障"
+              },
+              "statusList": {
+                "type": "array",
+                "description": "状态，支持查询多个"
+              },
+              "createdOnStart": {
+                "type": "string",
+                "description": "查询创建时间的起始时间点"
+              },
+              "createdOnEnd": {
+                "type": "string",
+                "description": "查询创建时间的结束时间点"
+              },
+              "createdBy": {
+                "type": "string",
+                "description": "创建人"
+              }
+            },
+            "required": []
+          }
+        },
+        {
+          "name": "orderNotContinueExecuteReason",
+          "type": "function",
+          "description": "运单为啥没有继续执行",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "orderIds": {
+                "type": "array",
+                "description": "运单"
+              }
+            },
+            "required": [
+              "orderIds"
+            ]
+          }
+        },
+        {
+          "name": "listInventoryOfMaterial",
+          "type": "function",
+          "description": "查询一个物料（货物）的库存明细，根据物料编号或名称，一般只需指定一个，但不能都不指定",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "materialId": {
+                "type": "string",
+                "description": "物料编号，或者说物料 ID"
+              },
+              "materialName": {
+                "type": "string",
+                "description": "物料名称，支持模糊查询"
+              }
+            },
+            "required": []
+          }
+        },
+        {
+          "name": "git_setRepoPrivate",
+          "type": "function",
+          "description": "设置 github 仓库为私有或者公开",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "repo 名称"
+              },
+              "visibility": {
+                "type": "string",
+                "description": "仓库可见性。public 或 private"
+              }
+            },
+            "required": [
+              "可见性"
+            ]
+          }
+        }
+      ],
+      "usage": {
+        "input_tokens": 2989,
+        "output_tokens": 51,
+        "total_tokens": 3040,
+        "input_tokens_details": {
+          "cached_tokens": 0
+        },
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        }
+      },
+      "caching": {
+        "type": "disabled"
+      },
+      "store": true,
+      "expire_at": 1786947690
+    },
+    "sequence_number": 16
+  }
+]

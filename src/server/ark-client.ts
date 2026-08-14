@@ -1,6 +1,7 @@
 import { aiConfig } from '@/config/ai-config'
 import { executeTool, loadAiCapabilities } from '@/server/ai-tools'
 import type { ChatStreamEvent } from '@/types/ai'
+import { writeFileSync } from 'fs'
 
 interface ChatSession {
   id: string
@@ -98,6 +99,8 @@ export async function createSession() {
     throw new Error('Ark 初始化会话失败：响应中没有 id')
   }
 
+  writeFileSync(`ark-session.json`, JSON.stringify(session, null, 2))
+
   session.lastResponseId = result.id
   sessions.set(session.id, session)
   return session.id
@@ -128,17 +131,22 @@ function parseSseBlock(block: string) {
   return JSON.parse(data) as ArkEvent
 }
 
+let a = 0
+
 async function consumeSse(response: Response, session: ChatSession, onEvent: StreamOptions['onEvent']) {
   if (!response.body) throw new Error('Ark 返回了空的流式响应')
-
+  a++
   const reader = response.body.getReader()
   const decoder = new TextDecoder()
   let buffer = ''
   let functionName = ''
   let callId = ''
 
+  const consumeList = []
+
   while (true) {
     const { done, value } = await reader.read()
+
     buffer += decoder.decode(value, { stream: !done }).replaceAll('\r\n', '\n')
 
     const blocks = buffer.split('\n\n')
@@ -148,6 +156,8 @@ async function consumeSse(response: Response, session: ChatSession, onEvent: Str
       const event = parseSseBlock(block)
       if (!event) continue
 
+      consumeList.push(event)
+      console.log(event.type, event.item?.type)
       if (event.type === 'response.created' && event.response?.id) {
         session.lastResponseId = event.response.id
       } else if (event.type === 'response.output_item.added' && event.item?.type === 'function_call') {
@@ -175,6 +185,8 @@ async function consumeSse(response: Response, session: ChatSession, onEvent: Str
 
     if (done) break
   }
+
+  writeFileSync(`consume-list-${a}.json`, JSON.stringify(consumeList, null, 2))
 }
 
 export async function streamChat({ sessionId, input, onEvent }: StreamOptions) {

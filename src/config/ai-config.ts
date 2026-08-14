@@ -2,14 +2,14 @@ export const aiConfig = {
   ark: {
     apiKey: '10b6a901-d4ba-4482-9ae9-f3bd77160ff8',
     baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
-    modelId: 'doubao-seed-evolving',
+    modelId: 'doubao-seed-2-0-mini-260428',
     timeoutMs: 60_000,
     caching: false
   },
   m4: {
-    baseUrl: 'http://127.0.0.1:5800',
-    appId: 'x',
-    appKey: 'x',
+    baseUrl: 'http://localhost:5800',
+    appId: 'm4',
+    appKey: 'm4',
     timeoutMs: 60_000
   },
   speech: {

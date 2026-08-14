@@ -181,7 +181,6 @@ export function ChatPage() {
           </span>
           <div>
             <strong>M4 AI</strong>
-            <span>个人学习控制台</span>
           </div>
         </div>
 
