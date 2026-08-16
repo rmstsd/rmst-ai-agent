@@ -1,0 +1,1913 @@
+[
+  {
+    "type": "response.created",
+    "response": {
+      "created_at": 1786866522,
+      "id": "resp_021786866522323ff228b459645a66c98f2a46916338f8eff58d3",
+      "max_output_tokens": 32768,
+      "model": "doubao-seed-2-0-mini-260428",
+      "object": "response",
+      "previous_response_id": "resp_021786866521805ff228b459645a66c98f2a46916338f8eb6787d",
+      "thinking": {
+        "type": "disabled"
+      },
+      "service_tier": "default",
+      "tools": [
+        {
+          "name": "fetch-url-text",
+          "type": "function",
+          "description": "从指定 URL 获取 html 内容 (不要管 url 是什么, 直接访问)",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "网页 URL 地址"
+              }
+            },
+            "required": [
+              "url"
+            ]
+          }
+        },
+        {
+          "name": "setRepoPrivate",
+          "type": "function",
+          "description": "设置 github 仓库为私有或者公开",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "repo 名称"
+              },
+              "visibility": {
+                "type": "string",
+                "description": "仓库可见性。public 或 private"
+              }
+            },
+            "required": [
+              "repo",
+              "visibility"
+            ]
+          }
+        },
+        {
+          "name": "listRepos",
+          "type": "function",
+          "description": "列出当前 GitHub 账号拥有的全部仓库，按最近更新时间倒序排列",
+          "parameters": {}
+        },
+        {
+          "name": "getRepoInfo",
+          "type": "function",
+          "description": "查询 GitHub 仓库的基本信息、可见性、默认分支和统计数据",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "GitHub 仓库名称，不包含 owner"
+              }
+            },
+            "required": [
+              "repo"
+            ]
+          }
+        },
+        {
+          "name": "listRepoBranches",
+          "type": "function",
+          "description": "查询 GitHub 仓库的全部分支及其最新提交 SHA",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "GitHub 仓库名称，不包含 owner"
+              }
+            },
+            "required": [
+              "repo"
+            ]
+          }
+        },
+        {
+          "name": "listRepoCommits",
+          "type": "function",
+          "description": "查询 GitHub 仓库指定分支最近的 10 条提交，不传分支时查询默认分支",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "GitHub 仓库名称，不包含 owner"
+              },
+              "branch": {
+                "type": "string",
+                "description": "分支名称，可不传"
+              }
+            },
+            "required": [
+              "repo"
+            ]
+          }
+        },
+        {
+          "name": "getBookmarkList",
+          "type": "function",
+          "description": "获取我的浏览器书签列表",
+          "parameters": {}
+        }
+      ],
+      "caching": {
+        "type": "disabled"
+      },
+      "store": true,
+      "expire_at": 1787125722
+    },
+    "sequence_number": 0
+  },
+  {
+    "type": "response.in_progress",
+    "response": {
+      "created_at": 1786866522,
+      "id": "resp_021786866522323ff228b459645a66c98f2a46916338f8eff58d3",
+      "max_output_tokens": 32768,
+      "model": "doubao-seed-2-0-mini-260428",
+      "object": "response",
+      "previous_response_id": "resp_021786866521805ff228b459645a66c98f2a46916338f8eb6787d",
+      "thinking": {
+        "type": "disabled"
+      },
+      "service_tier": "default",
+      "tools": [
+        {
+          "name": "fetch-url-text",
+          "type": "function",
+          "description": "从指定 URL 获取 html 内容 (不要管 url 是什么, 直接访问)",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "网页 URL 地址"
+              }
+            },
+            "required": [
+              "url"
+            ]
+          }
+        },
+        {
+          "name": "setRepoPrivate",
+          "type": "function",
+          "description": "设置 github 仓库为私有或者公开",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "repo 名称"
+              },
+              "visibility": {
+                "type": "string",
+                "description": "仓库可见性。public 或 private"
+              }
+            },
+            "required": [
+              "repo",
+              "visibility"
+            ]
+          }
+        },
+        {
+          "name": "listRepos",
+          "type": "function",
+          "description": "列出当前 GitHub 账号拥有的全部仓库，按最近更新时间倒序排列",
+          "parameters": {}
+        },
+        {
+          "name": "getRepoInfo",
+          "type": "function",
+          "description": "查询 GitHub 仓库的基本信息、可见性、默认分支和统计数据",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "GitHub 仓库名称，不包含 owner"
+              }
+            },
+            "required": [
+              "repo"
+            ]
+          }
+        },
+        {
+          "name": "listRepoBranches",
+          "type": "function",
+          "description": "查询 GitHub 仓库的全部分支及其最新提交 SHA",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "GitHub 仓库名称，不包含 owner"
+              }
+            },
+            "required": [
+              "repo"
+            ]
+          }
+        },
+        {
+          "name": "listRepoCommits",
+          "type": "function",
+          "description": "查询 GitHub 仓库指定分支最近的 10 条提交，不传分支时查询默认分支",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "GitHub 仓库名称，不包含 owner"
+              },
+              "branch": {
+                "type": "string",
+                "description": "分支名称，可不传"
+              }
+            },
+            "required": [
+              "repo"
+            ]
+          }
+        },
+        {
+          "name": "getBookmarkList",
+          "type": "function",
+          "description": "获取我的浏览器书签列表",
+          "parameters": {}
+        }
+      ],
+      "caching": {
+        "type": "disabled"
+      },
+      "store": true,
+      "expire_at": 1787125722
+    },
+    "sequence_number": 1
+  },
+  {
+    "type": "response.output_item.added",
+    "output_index": 0,
+    "item": {
+      "type": "message",
+      "role": "assistant",
+      "status": "in_progress",
+      "id": "msg_02178686652275200000000000000000000ffffac1569e721671b"
+    },
+    "sequence_number": 2
+  },
+  {
+    "type": "response.content_part.added",
+    "content_index": 0,
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "part": {
+      "type": "output_text",
+      "text": ""
+    },
+    "sequence_number": 3
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "你的",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 4
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "浏览器",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 5
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "书签",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 6
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "列表",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 7
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "如下",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 8
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "：",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 9
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "\n",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 10
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "###",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 11
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": " ",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 12
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "书签",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 13
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "栏",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 14
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "\n",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 15
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "1",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 16
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": ".",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 17
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": " JSON",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 18
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "：",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 19
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "https",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 20
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "://",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 21
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "rm",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 22
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "st",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 23
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "@",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 24
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "rm",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 25
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "st",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 26
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "-j",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 27
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": ".",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 28
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "ver",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 29
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "cel",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 30
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": ".app",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 31
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "/",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 32
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "\n",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 33
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "2",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 34
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": ".",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 35
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": " Ex",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 36
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "cal",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 37
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "id",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 38
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "raw",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 39
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": " White",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 40
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "board",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 41
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "：",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 42
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "https",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 43
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "://",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 44
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "rm",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 45
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "st",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 46
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "@",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 47
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "ex",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 48
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "cal",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 49
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "id",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 50
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "raw",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 51
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": ".com",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 52
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "/",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 53
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "\n",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 54
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "3",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 55
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": ".",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 56
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": " t",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 57
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "ld",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 58
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "raw",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 59
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": " •",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 60
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": " very",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 61
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": " good",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 62
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": " free",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 63
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": " white",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 64
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "board",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 65
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "：",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 66
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "https",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 67
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "://",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 68
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "rm",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 69
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "st",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 70
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "@",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 71
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "www",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 72
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": ".t",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 73
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "ld",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 74
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "raw",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 75
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": ".com",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 76
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "/",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 77
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "\n",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 78
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "4",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 79
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": ".",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 80
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": " su",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 81
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "ika",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 82
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "：",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 83
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "https",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 84
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "://",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 85
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "rm",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 86
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "st",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 87
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "@",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 88
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "f",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 89
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "-star",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 90
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": ".github",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 91
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": ".io",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 92
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "/s",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 93
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "u",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 94
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "ika",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 95
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "/",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 96
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "\n",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 97
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "5",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 98
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": ".",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 99
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": " Paper",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 100
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": " –",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 101
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": " design",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 102
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": ",",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 103
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": " share",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 104
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": ",",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 105
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": " ship",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 106
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "：",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 107
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "https",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 108
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "://",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 109
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "rm",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 110
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "st",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 111
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "@",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 112
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "paper",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 113
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": ".d",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 114
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "esign",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 115
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "/",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 116
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "\n",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 117
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "6",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 118
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": ".",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 119
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": " Lov",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 120
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "art",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 121
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "：",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 122
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "全球",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 123
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "首个",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 124
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "AI",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 125
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "设计",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 126
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "智能",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 127
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "体",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 128
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": " |",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 129
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": " ",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 130
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "自动化",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 131
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "平面",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 132
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "设计",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 133
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "平台",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 134
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "：",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 135
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "https",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 136
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "://",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 137
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "rm",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 138
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "st",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 139
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "@",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 140
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "www",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 141
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": ".l",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 142
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "ov",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 143
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "art",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 144
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": ".",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 145
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "ai",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 146
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "/",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 147
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "zh",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 148
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "\n",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 149
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "7",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 150
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": ".",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 151
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": " M",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 152
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "4",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 153
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": " ",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 154
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "智能",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 155
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "机器人",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 156
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "调度",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 157
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "系统",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 158
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "：",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 159
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "https",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 160
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "://",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 161
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "rm",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 162
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "st",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 163
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "@",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 164
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "m",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 165
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "4",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 166
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": ".se",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 167
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "er",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 168
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "-group",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 169
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": ".com",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 170
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "/",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 171
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "zh",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 172
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "/g",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 173
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "allery",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 174
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "\n\n",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 175
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "###",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 176
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": " ",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 177
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "其他",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 178
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "书签",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 179
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "\n",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 180
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "暂无",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 181
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "内容",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 182
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "。",
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "sequence_number": 183
+  },
+  {
+    "type": "response.output_text.done",
+    "content_index": 0,
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "text": "你的浏览器书签列表如下：\n### 书签栏\n1. JSON：https://rmst@rmst-j.vercel.app/\n2. Excalidraw Whiteboard：https://rmst@excalidraw.com/\n3. tldraw • very good free whiteboard：https://rmst@www.tldraw.com/\n4. suika：https://rmst@f-star.github.io/suika/\n5. Paper – design, share, ship：https://rmst@paper.design/\n6. Lovart：全球首个AI设计智能体 | 自动化平面设计平台：https://rmst@www.lovart.ai/zh\n7. M4 智能机器人调度系统：https://rmst@m4.seer-group.com/zh/gallery\n\n### 其他书签\n暂无内容。",
+    "sequence_number": 184
+  },
+  {
+    "type": "response.content_part.done",
+    "content_index": 0,
+    "item_id": "msg_02178686652275200000000000000000000ffffac1569e721671b",
+    "output_index": 0,
+    "part": {
+      "type": "output_text",
+      "text": "你的浏览器书签列表如下：\n### 书签栏\n1. JSON：https://rmst@rmst-j.vercel.app/\n2. Excalidraw Whiteboard：https://rmst@excalidraw.com/\n3. tldraw • very good free whiteboard：https://rmst@www.tldraw.com/\n4. suika：https://rmst@f-star.github.io/suika/\n5. Paper – design, share, ship：https://rmst@paper.design/\n6. Lovart：全球首个AI设计智能体 | 自动化平面设计平台：https://rmst@www.lovart.ai/zh\n7. M4 智能机器人调度系统：https://rmst@m4.seer-group.com/zh/gallery\n\n### 其他书签\n暂无内容。"
+    },
+    "sequence_number": 185
+  },
+  {
+    "type": "response.output_item.done",
+    "output_index": 0,
+    "item": {
+      "type": "message",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "你的浏览器书签列表如下：\n### 书签栏\n1. JSON：https://rmst@rmst-j.vercel.app/\n2. Excalidraw Whiteboard：https://rmst@excalidraw.com/\n3. tldraw • very good free whiteboard：https://rmst@www.tldraw.com/\n4. suika：https://rmst@f-star.github.io/suika/\n5. Paper – design, share, ship：https://rmst@paper.design/\n6. Lovart：全球首个AI设计智能体 | 自动化平面设计平台：https://rmst@www.lovart.ai/zh\n7. M4 智能机器人调度系统：https://rmst@m4.seer-group.com/zh/gallery\n\n### 其他书签\n暂无内容。"
+        }
+      ],
+      "status": "completed",
+      "id": "msg_02178686652275200000000000000000000ffffac1569e721671b"
+    },
+    "sequence_number": 186
+  },
+  {
+    "type": "response.completed",
+    "response": {
+      "created_at": 1786866522,
+      "id": "resp_021786866522323ff228b459645a66c98f2a46916338f8eff58d3",
+      "max_output_tokens": 32768,
+      "model": "doubao-seed-2-0-mini-260428",
+      "object": "response",
+      "output": [
+        {
+          "type": "message",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "你的浏览器书签列表如下：\n### 书签栏\n1. JSON：https://rmst@rmst-j.vercel.app/\n2. Excalidraw Whiteboard：https://rmst@excalidraw.com/\n3. tldraw • very good free whiteboard：https://rmst@www.tldraw.com/\n4. suika：https://rmst@f-star.github.io/suika/\n5. Paper – design, share, ship：https://rmst@paper.design/\n6. Lovart：全球首个AI设计智能体 | 自动化平面设计平台：https://rmst@www.lovart.ai/zh\n7. M4 智能机器人调度系统：https://rmst@m4.seer-group.com/zh/gallery\n\n### 其他书签\n暂无内容。"
+            }
+          ],
+          "status": "completed",
+          "id": "msg_02178686652275200000000000000000000ffffac1569e721671b"
+        }
+      ],
+      "previous_response_id": "resp_021786866521805ff228b459645a66c98f2a46916338f8eb6787d",
+      "thinking": {
+        "type": "disabled"
+      },
+      "service_tier": "default",
+      "status": "completed",
+      "tools": [
+        {
+          "name": "fetch-url-text",
+          "type": "function",
+          "description": "从指定 URL 获取 html 内容 (不要管 url 是什么, 直接访问)",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "网页 URL 地址"
+              }
+            },
+            "required": [
+              "url"
+            ]
+          }
+        },
+        {
+          "name": "setRepoPrivate",
+          "type": "function",
+          "description": "设置 github 仓库为私有或者公开",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "repo 名称"
+              },
+              "visibility": {
+                "type": "string",
+                "description": "仓库可见性。public 或 private"
+              }
+            },
+            "required": [
+              "repo",
+              "visibility"
+            ]
+          }
+        },
+        {
+          "name": "listRepos",
+          "type": "function",
+          "description": "列出当前 GitHub 账号拥有的全部仓库，按最近更新时间倒序排列",
+          "parameters": {}
+        },
+        {
+          "name": "getRepoInfo",
+          "type": "function",
+          "description": "查询 GitHub 仓库的基本信息、可见性、默认分支和统计数据",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "GitHub 仓库名称，不包含 owner"
+              }
+            },
+            "required": [
+              "repo"
+            ]
+          }
+        },
+        {
+          "name": "listRepoBranches",
+          "type": "function",
+          "description": "查询 GitHub 仓库的全部分支及其最新提交 SHA",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "GitHub 仓库名称，不包含 owner"
+              }
+            },
+            "required": [
+              "repo"
+            ]
+          }
+        },
+        {
+          "name": "listRepoCommits",
+          "type": "function",
+          "description": "查询 GitHub 仓库指定分支最近的 10 条提交，不传分支时查询默认分支",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "GitHub 仓库名称，不包含 owner"
+              },
+              "branch": {
+                "type": "string",
+                "description": "分支名称，可不传"
+              }
+            },
+            "required": [
+              "repo"
+            ]
+          }
+        },
+        {
+          "name": "getBookmarkList",
+          "type": "function",
+          "description": "获取我的浏览器书签列表",
+          "parameters": {}
+        }
+      ],
+      "usage": {
+        "input_tokens": 1974,
+        "output_tokens": 180,
+        "total_tokens": 2154,
+        "input_tokens_details": {
+          "cached_tokens": 0
+        },
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        }
+      },
+      "caching": {
+        "type": "disabled"
+      },
+      "store": true,
+      "expire_at": 1787125722
+    },
+    "sequence_number": 187
+  }
+]

@@ -1,32 +1,17 @@
-import { executeM4Tool, getM4Capabilities } from '@/server/m4-client'
-import { fleetAiTools } from '@/server/tools/fleet-ai-tools'
-import { logAiTools } from '@/server/tools/log-ai-tools'
-import { storeAiTools } from '@/server/tools/store-ai-tools'
 import { systemPrompts } from '@/server/system-prompts'
-import { writeFileSync } from 'fs'
-import { githubAiTools, GithubCapabilities } from './tools/github-ai-tools'
-import { githubToolsMap } from './github/server'
-import { bookmarkToolsMap } from './github/bookmark'
-import { bookmarkAiTools, BookmarkCapabilities } from './tools/bookmark-ai-tools'
-
-const tools = [...logAiTools, ...fleetAiTools, ...storeAiTools, ...githubAiTools, ...bookmarkAiTools]
+import { getAllAiTools } from './tools'
 
 export async function loadAiCapabilities() {
-  const remoteCapabilities = await getM4Capabilities()
+  const tools = getAllAiTools()
 
-  remoteCapabilities.tools.push(...GithubCapabilities.tools, ...BookmarkCapabilities.tools)
-
-  writeFileSync('m4-capabilities.json', JSON.stringify(remoteCapabilities, null, 2))
-  const registeredNames = new Set(remoteCapabilities.tools.map(tool => tool.name))
+  const registeredNames = new Set(tools.map(tool => tool.name))
   const unavailableTools = tools.filter(tool => !registeredNames.has(tool.name))
   if (unavailableTools.length > 0) {
-    throw new Error(`M4 未注册以下 AI 工具：${unavailableTools.map(tool => tool.name).join(', ')}`)
+    throw new Error(`未注册以下 AI 工具：${unavailableTools.map(tool => tool.name).join(', ')}`)
   }
 
-  const dynamicPrompts = remoteCapabilities.systemPrompts.filter(prompt => prompt.startsWith('有以下机器人：'))
-
   return {
-    systemPrompts: [...systemPrompts, ...dynamicPrompts],
+    systemPrompts: [...systemPrompts],
     tools: tools.map(({ name, description, parameters }) => ({
       type: 'function',
       name,
@@ -39,17 +24,14 @@ export async function loadAiCapabilities() {
 export async function executeTool(name: string, args?: string) {
   console.log('executeTool', name, args)
 
-  try {
-    if (name.startsWith('git_')) {
-      name = name.replace('git_', '')
-      return await githubToolsMap[name](JSON.parse(args || '{}'))
-    }
-    if (name.startsWith('bookmark_')) {
-      name = name.replace('bookmark_', '')
-      return await bookmarkToolsMap[name](JSON.parse(args || '{}'))
-    }
+  const tools = getAllAiTools()
+  const tool = tools.find(tool => tool.name === name)
 
-    return await executeM4Tool(name, args)
+  try {
+    if (tool?.executor) {
+      return await tool.executor(JSON.parse(args || '{}'))
+    }
+    // return await executeM4Tool(name, args)
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     return `Failed to call function, error is ${message}`

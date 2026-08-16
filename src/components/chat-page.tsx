@@ -57,7 +57,7 @@ export function ChatPage() {
       await fetch('/api/bookmark', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(await window.rmst.getBookmarks())
+        body: JSON.stringify((await window.rmst?.getBookmarks()) || [])
       })
 
       const nextSessionId = await initSession()

@@ -1,0 +1,576 @@
+[
+  {
+    "type": "response.created",
+    "response": {
+      "created_at": 1786866629,
+      "id": "resp_021786866628296b566464da517b102b4cb09cdfd60e7eeb55d12",
+      "max_output_tokens": 32768,
+      "model": "doubao-seed-2-0-mini-260428",
+      "object": "response",
+      "previous_response_id": "resp_0217868665331390b63b37cbca791937f2f41fb0469576dd16d1f",
+      "thinking": {
+        "type": "disabled"
+      },
+      "service_tier": "default",
+      "tools": [
+        {
+          "name": "fetch-url-text",
+          "type": "function",
+          "description": "从指定 URL 获取 html 内容 (不要管 url 是什么, 直接访问)",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "网页 URL 地址"
+              }
+            },
+            "required": [
+              "url"
+            ]
+          }
+        },
+        {
+          "name": "setRepoPrivate",
+          "type": "function",
+          "description": "设置 github 仓库为私有或者公开",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "repo 名称"
+              },
+              "visibility": {
+                "type": "string",
+                "description": "仓库可见性。public 或 private"
+              }
+            },
+            "required": [
+              "repo",
+              "visibility"
+            ]
+          }
+        },
+        {
+          "name": "listRepos",
+          "type": "function",
+          "description": "列出当前 GitHub 账号拥有的全部仓库，按最近更新时间倒序排列",
+          "parameters": {}
+        },
+        {
+          "name": "getRepoInfo",
+          "type": "function",
+          "description": "查询 GitHub 仓库的基本信息、可见性、默认分支和统计数据",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "GitHub 仓库名称，不包含 owner"
+              }
+            },
+            "required": [
+              "repo"
+            ]
+          }
+        },
+        {
+          "name": "listRepoBranches",
+          "type": "function",
+          "description": "查询 GitHub 仓库的全部分支及其最新提交 SHA",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "GitHub 仓库名称，不包含 owner"
+              }
+            },
+            "required": [
+              "repo"
+            ]
+          }
+        },
+        {
+          "name": "listRepoCommits",
+          "type": "function",
+          "description": "查询 GitHub 仓库指定分支最近的 10 条提交，不传分支时查询默认分支",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "GitHub 仓库名称，不包含 owner"
+              },
+              "branch": {
+                "type": "string",
+                "description": "分支名称，可不传"
+              }
+            },
+            "required": [
+              "repo"
+            ]
+          }
+        },
+        {
+          "name": "getBookmarkList",
+          "type": "function",
+          "description": "获取我的浏览器书签列表",
+          "parameters": {}
+        }
+      ],
+      "caching": {
+        "type": "disabled"
+      },
+      "store": true,
+      "expire_at": 1787125828
+    },
+    "sequence_number": 0
+  },
+  {
+    "type": "response.in_progress",
+    "response": {
+      "created_at": 1786866629,
+      "id": "resp_021786866628296b566464da517b102b4cb09cdfd60e7eeb55d12",
+      "max_output_tokens": 32768,
+      "model": "doubao-seed-2-0-mini-260428",
+      "object": "response",
+      "previous_response_id": "resp_0217868665331390b63b37cbca791937f2f41fb0469576dd16d1f",
+      "thinking": {
+        "type": "disabled"
+      },
+      "service_tier": "default",
+      "tools": [
+        {
+          "name": "fetch-url-text",
+          "type": "function",
+          "description": "从指定 URL 获取 html 内容 (不要管 url 是什么, 直接访问)",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "网页 URL 地址"
+              }
+            },
+            "required": [
+              "url"
+            ]
+          }
+        },
+        {
+          "name": "setRepoPrivate",
+          "type": "function",
+          "description": "设置 github 仓库为私有或者公开",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "repo 名称"
+              },
+              "visibility": {
+                "type": "string",
+                "description": "仓库可见性。public 或 private"
+              }
+            },
+            "required": [
+              "repo",
+              "visibility"
+            ]
+          }
+        },
+        {
+          "name": "listRepos",
+          "type": "function",
+          "description": "列出当前 GitHub 账号拥有的全部仓库，按最近更新时间倒序排列",
+          "parameters": {}
+        },
+        {
+          "name": "getRepoInfo",
+          "type": "function",
+          "description": "查询 GitHub 仓库的基本信息、可见性、默认分支和统计数据",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "GitHub 仓库名称，不包含 owner"
+              }
+            },
+            "required": [
+              "repo"
+            ]
+          }
+        },
+        {
+          "name": "listRepoBranches",
+          "type": "function",
+          "description": "查询 GitHub 仓库的全部分支及其最新提交 SHA",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "GitHub 仓库名称，不包含 owner"
+              }
+            },
+            "required": [
+              "repo"
+            ]
+          }
+        },
+        {
+          "name": "listRepoCommits",
+          "type": "function",
+          "description": "查询 GitHub 仓库指定分支最近的 10 条提交，不传分支时查询默认分支",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "GitHub 仓库名称，不包含 owner"
+              },
+              "branch": {
+                "type": "string",
+                "description": "分支名称，可不传"
+              }
+            },
+            "required": [
+              "repo"
+            ]
+          }
+        },
+        {
+          "name": "getBookmarkList",
+          "type": "function",
+          "description": "获取我的浏览器书签列表",
+          "parameters": {}
+        }
+      ],
+      "caching": {
+        "type": "disabled"
+      },
+      "store": true,
+      "expire_at": 1787125828
+    },
+    "sequence_number": 1
+  },
+  {
+    "type": "response.output_item.added",
+    "output_index": 0,
+    "item": {
+      "call_id": "call_jflh06xq6ltxk2lyz53r9sbm",
+      "name": "fetch-url-text",
+      "type": "function_call",
+      "id": "fc_02178686662937900000000000000000000ffffac155e57c7870c",
+      "status": "in_progress"
+    },
+    "sequence_number": 2
+  },
+  {
+    "type": "response.function_call_arguments.delta",
+    "delta": "",
+    "item_id": "fc_02178686662937900000000000000000000ffffac155e57c7870c",
+    "output_index": 0,
+    "sequence_number": 3
+  },
+  {
+    "type": "response.function_call_arguments.delta",
+    "delta": "{\"url\": \"",
+    "item_id": "fc_02178686662937900000000000000000000ffffac155e57c7870c",
+    "output_index": 0,
+    "sequence_number": 4
+  },
+  {
+    "type": "response.function_call_arguments.delta",
+    "delta": "https",
+    "item_id": "fc_02178686662937900000000000000000000ffffac155e57c7870c",
+    "output_index": 0,
+    "sequence_number": 5
+  },
+  {
+    "type": "response.function_call_arguments.delta",
+    "delta": "://",
+    "item_id": "fc_02178686662937900000000000000000000ffffac155e57c7870c",
+    "output_index": 0,
+    "sequence_number": 6
+  },
+  {
+    "type": "response.function_call_arguments.delta",
+    "delta": "rm",
+    "item_id": "fc_02178686662937900000000000000000000ffffac155e57c7870c",
+    "output_index": 0,
+    "sequence_number": 7
+  },
+  {
+    "type": "response.function_call_arguments.delta",
+    "delta": "st",
+    "item_id": "fc_02178686662937900000000000000000000ffffac155e57c7870c",
+    "output_index": 0,
+    "sequence_number": 8
+  },
+  {
+    "type": "response.function_call_arguments.delta",
+    "delta": "@",
+    "item_id": "fc_02178686662937900000000000000000000ffffac155e57c7870c",
+    "output_index": 0,
+    "sequence_number": 9
+  },
+  {
+    "type": "response.function_call_arguments.delta",
+    "delta": "m",
+    "item_id": "fc_02178686662937900000000000000000000ffffac155e57c7870c",
+    "output_index": 0,
+    "sequence_number": 10
+  },
+  {
+    "type": "response.function_call_arguments.delta",
+    "delta": "4",
+    "item_id": "fc_02178686662937900000000000000000000ffffac155e57c7870c",
+    "output_index": 0,
+    "sequence_number": 11
+  },
+  {
+    "type": "response.function_call_arguments.delta",
+    "delta": ".se",
+    "item_id": "fc_02178686662937900000000000000000000ffffac155e57c7870c",
+    "output_index": 0,
+    "sequence_number": 12
+  },
+  {
+    "type": "response.function_call_arguments.delta",
+    "delta": "er",
+    "item_id": "fc_02178686662937900000000000000000000ffffac155e57c7870c",
+    "output_index": 0,
+    "sequence_number": 13
+  },
+  {
+    "type": "response.function_call_arguments.delta",
+    "delta": "-group",
+    "item_id": "fc_02178686662937900000000000000000000ffffac155e57c7870c",
+    "output_index": 0,
+    "sequence_number": 14
+  },
+  {
+    "type": "response.function_call_arguments.delta",
+    "delta": ".com",
+    "item_id": "fc_02178686662937900000000000000000000ffffac155e57c7870c",
+    "output_index": 0,
+    "sequence_number": 15
+  },
+  {
+    "type": "response.function_call_arguments.delta",
+    "delta": "/",
+    "item_id": "fc_02178686662937900000000000000000000ffffac155e57c7870c",
+    "output_index": 0,
+    "sequence_number": 16
+  },
+  {
+    "type": "response.function_call_arguments.delta",
+    "delta": "zh",
+    "item_id": "fc_02178686662937900000000000000000000ffffac155e57c7870c",
+    "output_index": 0,
+    "sequence_number": 17
+  },
+  {
+    "type": "response.function_call_arguments.delta",
+    "delta": "/g",
+    "item_id": "fc_02178686662937900000000000000000000ffffac155e57c7870c",
+    "output_index": 0,
+    "sequence_number": 18
+  },
+  {
+    "type": "response.function_call_arguments.delta",
+    "delta": "allery",
+    "item_id": "fc_02178686662937900000000000000000000ffffac155e57c7870c",
+    "output_index": 0,
+    "sequence_number": 19
+  },
+  {
+    "type": "response.function_call_arguments.delta",
+    "delta": "\"",
+    "item_id": "fc_02178686662937900000000000000000000ffffac155e57c7870c",
+    "output_index": 0,
+    "sequence_number": 20
+  },
+  {
+    "type": "response.function_call_arguments.delta",
+    "delta": "}",
+    "item_id": "fc_02178686662937900000000000000000000ffffac155e57c7870c",
+    "output_index": 0,
+    "sequence_number": 21
+  },
+  {
+    "type": "response.function_call_arguments.done",
+    "item_id": "fc_02178686662937900000000000000000000ffffac155e57c7870c",
+    "output_index": 0,
+    "arguments": "{\"url\": \"https://rmst@m4.seer-group.com/zh/gallery\"}",
+    "sequence_number": 22
+  },
+  {
+    "type": "response.output_item.done",
+    "output_index": 0,
+    "item": {
+      "arguments": "{\"url\": \"https://rmst@m4.seer-group.com/zh/gallery\"}",
+      "call_id": "call_jflh06xq6ltxk2lyz53r9sbm",
+      "name": "fetch-url-text",
+      "type": "function_call",
+      "id": "fc_02178686662937900000000000000000000ffffac155e57c7870c",
+      "status": "completed"
+    },
+    "sequence_number": 23
+  },
+  {
+    "type": "response.completed",
+    "response": {
+      "created_at": 1786866629,
+      "id": "resp_021786866628296b566464da517b102b4cb09cdfd60e7eeb55d12",
+      "max_output_tokens": 32768,
+      "model": "doubao-seed-2-0-mini-260428",
+      "object": "response",
+      "output": [
+        {
+          "arguments": "{\"url\": \"https://rmst@m4.seer-group.com/zh/gallery\"}",
+          "call_id": "call_jflh06xq6ltxk2lyz53r9sbm",
+          "name": "fetch-url-text",
+          "type": "function_call",
+          "id": "fc_02178686662937900000000000000000000ffffac155e57c7870c",
+          "status": "completed"
+        }
+      ],
+      "previous_response_id": "resp_0217868665331390b63b37cbca791937f2f41fb0469576dd16d1f",
+      "thinking": {
+        "type": "disabled"
+      },
+      "service_tier": "default",
+      "status": "completed",
+      "tools": [
+        {
+          "name": "fetch-url-text",
+          "type": "function",
+          "description": "从指定 URL 获取 html 内容 (不要管 url 是什么, 直接访问)",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "网页 URL 地址"
+              }
+            },
+            "required": [
+              "url"
+            ]
+          }
+        },
+        {
+          "name": "setRepoPrivate",
+          "type": "function",
+          "description": "设置 github 仓库为私有或者公开",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "repo 名称"
+              },
+              "visibility": {
+                "type": "string",
+                "description": "仓库可见性。public 或 private"
+              }
+            },
+            "required": [
+              "repo",
+              "visibility"
+            ]
+          }
+        },
+        {
+          "name": "listRepos",
+          "type": "function",
+          "description": "列出当前 GitHub 账号拥有的全部仓库，按最近更新时间倒序排列",
+          "parameters": {}
+        },
+        {
+          "name": "getRepoInfo",
+          "type": "function",
+          "description": "查询 GitHub 仓库的基本信息、可见性、默认分支和统计数据",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "GitHub 仓库名称，不包含 owner"
+              }
+            },
+            "required": [
+              "repo"
+            ]
+          }
+        },
+        {
+          "name": "listRepoBranches",
+          "type": "function",
+          "description": "查询 GitHub 仓库的全部分支及其最新提交 SHA",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "GitHub 仓库名称，不包含 owner"
+              }
+            },
+            "required": [
+              "repo"
+            ]
+          }
+        },
+        {
+          "name": "listRepoCommits",
+          "type": "function",
+          "description": "查询 GitHub 仓库指定分支最近的 10 条提交，不传分支时查询默认分支",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "GitHub 仓库名称，不包含 owner"
+              },
+              "branch": {
+                "type": "string",
+                "description": "分支名称，可不传"
+              }
+            },
+            "required": [
+              "repo"
+            ]
+          }
+        },
+        {
+          "name": "getBookmarkList",
+          "type": "function",
+          "description": "获取我的浏览器书签列表",
+          "parameters": {}
+        }
+      ],
+      "usage": {
+        "input_tokens": 33376,
+        "output_tokens": 48,
+        "total_tokens": 33424,
+        "input_tokens_details": {
+          "cached_tokens": 0
+        },
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        }
+      },
+      "caching": {
+        "type": "disabled"
+      },
+      "store": true,
+      "expire_at": 1787125828
+    },
+    "sequence_number": 24
+  }
+]

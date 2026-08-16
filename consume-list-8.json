@@ -1,0 +1,713 @@
+[
+  {
+    "type": "response.created",
+    "response": {
+      "created_at": 1786865269,
+      "id": "resp_021786865269080f0b662e0a22462bcc30964e8c71cc76633603f",
+      "max_output_tokens": 32768,
+      "model": "doubao-seed-2-0-mini-260428",
+      "object": "response",
+      "previous_response_id": "resp_0217868652570828df8e1a1401bb5aa62b5b494646ada58ebe38e",
+      "thinking": {
+        "type": "disabled"
+      },
+      "service_tier": "default",
+      "tools": [
+        {
+          "name": "fetch-url-text",
+          "type": "function",
+          "description": "从指定 URL 获取 html 内容",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "网页 URL 地址"
+              }
+            },
+            "required": [
+              "url"
+            ]
+          }
+        },
+        {
+          "name": "setRepoPrivate",
+          "type": "function",
+          "description": "设置 github 仓库为私有或者公开",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "repo 名称"
+              },
+              "visibility": {
+                "type": "string",
+                "description": "仓库可见性。public 或 private"
+              }
+            },
+            "required": [
+              "repo",
+              "visibility"
+            ]
+          }
+        },
+        {
+          "name": "listRepos",
+          "type": "function",
+          "description": "列出当前 GitHub 账号拥有的全部仓库，按最近更新时间倒序排列",
+          "parameters": {}
+        },
+        {
+          "name": "getRepoInfo",
+          "type": "function",
+          "description": "查询 GitHub 仓库的基本信息、可见性、默认分支和统计数据",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "GitHub 仓库名称，不包含 owner"
+              }
+            },
+            "required": [
+              "repo"
+            ]
+          }
+        },
+        {
+          "name": "listRepoBranches",
+          "type": "function",
+          "description": "查询 GitHub 仓库的全部分支及其最新提交 SHA",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "GitHub 仓库名称，不包含 owner"
+              }
+            },
+            "required": [
+              "repo"
+            ]
+          }
+        },
+        {
+          "name": "listRepoCommits",
+          "type": "function",
+          "description": "查询 GitHub 仓库指定分支最近的 10 条提交，不传分支时查询默认分支",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "GitHub 仓库名称，不包含 owner"
+              },
+              "branch": {
+                "type": "string",
+                "description": "分支名称，可不传"
+              }
+            },
+            "required": [
+              "repo"
+            ]
+          }
+        },
+        {
+          "name": "getBookmarkList",
+          "type": "function",
+          "description": "获取我的浏览器书签列表",
+          "parameters": {}
+        }
+      ],
+      "caching": {
+        "type": "disabled"
+      },
+      "store": true,
+      "expire_at": 1787124469
+    },
+    "sequence_number": 0
+  },
+  {
+    "type": "response.in_progress",
+    "response": {
+      "created_at": 1786865269,
+      "id": "resp_021786865269080f0b662e0a22462bcc30964e8c71cc76633603f",
+      "max_output_tokens": 32768,
+      "model": "doubao-seed-2-0-mini-260428",
+      "object": "response",
+      "previous_response_id": "resp_0217868652570828df8e1a1401bb5aa62b5b494646ada58ebe38e",
+      "thinking": {
+        "type": "disabled"
+      },
+      "service_tier": "default",
+      "tools": [
+        {
+          "name": "fetch-url-text",
+          "type": "function",
+          "description": "从指定 URL 获取 html 内容",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "网页 URL 地址"
+              }
+            },
+            "required": [
+              "url"
+            ]
+          }
+        },
+        {
+          "name": "setRepoPrivate",
+          "type": "function",
+          "description": "设置 github 仓库为私有或者公开",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "repo 名称"
+              },
+              "visibility": {
+                "type": "string",
+                "description": "仓库可见性。public 或 private"
+              }
+            },
+            "required": [
+              "repo",
+              "visibility"
+            ]
+          }
+        },
+        {
+          "name": "listRepos",
+          "type": "function",
+          "description": "列出当前 GitHub 账号拥有的全部仓库，按最近更新时间倒序排列",
+          "parameters": {}
+        },
+        {
+          "name": "getRepoInfo",
+          "type": "function",
+          "description": "查询 GitHub 仓库的基本信息、可见性、默认分支和统计数据",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "GitHub 仓库名称，不包含 owner"
+              }
+            },
+            "required": [
+              "repo"
+            ]
+          }
+        },
+        {
+          "name": "listRepoBranches",
+          "type": "function",
+          "description": "查询 GitHub 仓库的全部分支及其最新提交 SHA",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "GitHub 仓库名称，不包含 owner"
+              }
+            },
+            "required": [
+              "repo"
+            ]
+          }
+        },
+        {
+          "name": "listRepoCommits",
+          "type": "function",
+          "description": "查询 GitHub 仓库指定分支最近的 10 条提交，不传分支时查询默认分支",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "GitHub 仓库名称，不包含 owner"
+              },
+              "branch": {
+                "type": "string",
+                "description": "分支名称，可不传"
+              }
+            },
+            "required": [
+              "repo"
+            ]
+          }
+        },
+        {
+          "name": "getBookmarkList",
+          "type": "function",
+          "description": "获取我的浏览器书签列表",
+          "parameters": {}
+        }
+      ],
+      "caching": {
+        "type": "disabled"
+      },
+      "store": true,
+      "expire_at": 1787124469
+    },
+    "sequence_number": 1
+  },
+  {
+    "type": "response.output_item.added",
+    "output_index": 0,
+    "item": {
+      "type": "message",
+      "role": "assistant",
+      "status": "in_progress",
+      "id": "msg_02178686526945200000000000000000000ffffac150a62413b15"
+    },
+    "sequence_number": 2
+  },
+  {
+    "type": "response.content_part.added",
+    "content_index": 0,
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "part": {
+      "type": "output_text",
+      "text": ""
+    },
+    "sequence_number": 3
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "很",
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "sequence_number": 4
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "抱歉",
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "sequence_number": 5
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "，",
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "sequence_number": 6
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "目前",
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "sequence_number": 7
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "无法",
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "sequence_number": 8
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "通过",
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "sequence_number": 9
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "工具",
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "sequence_number": 10
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "访问",
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "sequence_number": 11
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "该",
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "sequence_number": 12
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "页面",
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "sequence_number": 13
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "，",
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "sequence_number": 14
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "建议",
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "sequence_number": 15
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "你",
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "sequence_number": 16
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "更换",
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "sequence_number": 17
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "浏览器",
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "sequence_number": 18
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "或",
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "sequence_number": 19
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "网络",
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "sequence_number": 20
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "后",
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "sequence_number": 21
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "再次",
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "sequence_number": 22
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "尝试",
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "sequence_number": 23
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "，",
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "sequence_number": 24
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "或者",
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "sequence_number": 25
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "在",
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "sequence_number": 26
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "浏览器",
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "sequence_number": 27
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "中",
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "sequence_number": 28
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "直接",
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "sequence_number": 29
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "输入",
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "sequence_number": 30
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "网址",
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "sequence_number": 31
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "访问",
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "sequence_number": 32
+  },
+  {
+    "type": "response.output_text.delta",
+    "content_index": 0,
+    "delta": "。",
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "sequence_number": 33
+  },
+  {
+    "type": "response.output_text.done",
+    "content_index": 0,
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "text": "很抱歉，目前无法通过工具访问该页面，建议你更换浏览器或网络后再次尝试，或者在浏览器中直接输入网址访问。",
+    "sequence_number": 34
+  },
+  {
+    "type": "response.content_part.done",
+    "content_index": 0,
+    "item_id": "msg_02178686526945200000000000000000000ffffac150a62413b15",
+    "output_index": 0,
+    "part": {
+      "type": "output_text",
+      "text": "很抱歉，目前无法通过工具访问该页面，建议你更换浏览器或网络后再次尝试，或者在浏览器中直接输入网址访问。"
+    },
+    "sequence_number": 35
+  },
+  {
+    "type": "response.output_item.done",
+    "output_index": 0,
+    "item": {
+      "type": "message",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "很抱歉，目前无法通过工具访问该页面，建议你更换浏览器或网络后再次尝试，或者在浏览器中直接输入网址访问。"
+        }
+      ],
+      "status": "completed",
+      "id": "msg_02178686526945200000000000000000000ffffac150a62413b15"
+    },
+    "sequence_number": 36
+  },
+  {
+    "type": "response.completed",
+    "response": {
+      "created_at": 1786865269,
+      "id": "resp_021786865269080f0b662e0a22462bcc30964e8c71cc76633603f",
+      "max_output_tokens": 32768,
+      "model": "doubao-seed-2-0-mini-260428",
+      "object": "response",
+      "output": [
+        {
+          "type": "message",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "很抱歉，目前无法通过工具访问该页面，建议你更换浏览器或网络后再次尝试，或者在浏览器中直接输入网址访问。"
+            }
+          ],
+          "status": "completed",
+          "id": "msg_02178686526945200000000000000000000ffffac150a62413b15"
+        }
+      ],
+      "previous_response_id": "resp_0217868652570828df8e1a1401bb5aa62b5b494646ada58ebe38e",
+      "thinking": {
+        "type": "disabled"
+      },
+      "service_tier": "default",
+      "status": "completed",
+      "tools": [
+        {
+          "name": "fetch-url-text",
+          "type": "function",
+          "description": "从指定 URL 获取 html 内容",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "网页 URL 地址"
+              }
+            },
+            "required": [
+              "url"
+            ]
+          }
+        },
+        {
+          "name": "setRepoPrivate",
+          "type": "function",
+          "description": "设置 github 仓库为私有或者公开",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "repo 名称"
+              },
+              "visibility": {
+                "type": "string",
+                "description": "仓库可见性。public 或 private"
+              }
+            },
+            "required": [
+              "repo",
+              "visibility"
+            ]
+          }
+        },
+        {
+          "name": "listRepos",
+          "type": "function",
+          "description": "列出当前 GitHub 账号拥有的全部仓库，按最近更新时间倒序排列",
+          "parameters": {}
+        },
+        {
+          "name": "getRepoInfo",
+          "type": "function",
+          "description": "查询 GitHub 仓库的基本信息、可见性、默认分支和统计数据",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "GitHub 仓库名称，不包含 owner"
+              }
+            },
+            "required": [
+              "repo"
+            ]
+          }
+        },
+        {
+          "name": "listRepoBranches",
+          "type": "function",
+          "description": "查询 GitHub 仓库的全部分支及其最新提交 SHA",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "GitHub 仓库名称，不包含 owner"
+              }
+            },
+            "required": [
+              "repo"
+            ]
+          }
+        },
+        {
+          "name": "listRepoCommits",
+          "type": "function",
+          "description": "查询 GitHub 仓库指定分支最近的 10 条提交，不传分支时查询默认分支",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "repo": {
+                "type": "string",
+                "description": "GitHub 仓库名称，不包含 owner"
+              },
+              "branch": {
+                "type": "string",
+                "description": "分支名称，可不传"
+              }
+            },
+            "required": [
+              "repo"
+            ]
+          }
+        },
+        {
+          "name": "getBookmarkList",
+          "type": "function",
+          "description": "获取我的浏览器书签列表",
+          "parameters": {}
+        }
+      ],
+      "usage": {
+        "input_tokens": 2493,
+        "output_tokens": 30,
+        "total_tokens": 2523,
+        "input_tokens_details": {
+          "cached_tokens": 2360
+        },
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        }
+      },
+      "caching": {
+        "type": "disabled"
+      },
+      "store": true,
+      "expire_at": 1787124469
+    },
+    "sequence_number": 37
+  }
+]

@@ -2,6 +2,7 @@ export interface AiToolDefinition {
   name: string
   description: string
   parameters: Record<string, unknown>
+  executor?: (args: Record<string, unknown>) => Promise<any>
 }
 
 export const emptyParameters = {}

@@ -1,17 +1,16 @@
 import type { AiToolDefinition } from '@/server/tools/tool-types'
 import { emptyParameters } from '@/server/tools/tool-types'
-import type { M4Capabilities } from '@/server/m4-client'
+import { bookMarkList } from '@/app/api/bookmark/route'
+
+async function getBookmarkList() {
+  return JSON.stringify(bookMarkList)
+}
 
 export const bookmarkAiTools: AiToolDefinition[] = [
   {
-    name: 'bookmark_getBookmarkList',
+    name: 'getBookmarkList',
     description: '获取我的浏览器书签列表',
-    parameters: emptyParameters
+    parameters: emptyParameters,
+    executor: getBookmarkList
   }
 ]
-
-export const BookmarkCapabilities: M4Capabilities = {
-  systemPrompts: [],
-  tools: bookmarkAiTools,
-  hotWords: []
-}
