@@ -6,6 +6,7 @@
 - SSE 流式对话、停止生成和函数调用闭环
 - 火山引擎录音转文字
 - Next.js Route Handlers 后端与 React 聊天界面
+- 从 `src/skills` 按需发现和加载 Skills
 - Tailwind CSS 4 和 SCSS
 
 ## 配置
@@ -48,3 +49,9 @@ npm run dev
 - `POST /api/ai/speech-recognize`：一次性语音识别
 
 浏览器端所有通信封装在 `src/api/ai-api.ts`，没有使用 Server Actions。
+
+## Skills
+
+每个 Skill 固定存放在 `src/skills/<skill-name>/SKILL.md`，其中 `SKILL.md` 必须包含 `name` 和 `description` frontmatter，且 `name` 与目录名一致。创建会话时只向模型提供 Skill 名称和描述；任务匹配后，模型会调用 `load-skill` 工具按需加载完整内容。
+
+Skill 引用的脚本和资料放在自己的目录中，并使用相对于该 Skill 目录的路径。修改或新增 Skill 后，新建会话即可使用。

@@ -1,6 +1,7 @@
 ---
 name: m4-website
 description: 访问并提取 M4 官网的公开内容。用于查询 M4 产品介绍、机器人调度、猎鹰任务、项目视频、界面图集、技术研究、博客，以及获取或下载 M4 启动器的 Windows、macOS、Linux 安装包。
+
 metadata:
   rmst-author: m4
   rmst-description: M4 网站操作技能 https://m4.seer-group.com/
@@ -15,15 +16,15 @@ metadata:
 - 将官网视为 SSR 站点。优先直接请求最终 HTML 并解析 DOM，不要依赖搜索引擎摘要或猜测私有 API。
 - 请求根路径 `/` 时跟随重定向，并记录最终 URL。
 
-| 内容 | 路径 |
-| --- | --- |
-| 首页与 M4 启动器 | `/{locale}` |
-| 博客 | `/{locale}/blog` |
-| 机器人调度 | `/{locale}/fleet` |
-| 猎鹰任务 | `/{locale}/task` |
-| 项目视频 | `/{locale}/video` |
-| 界面图集 | `/{locale}/gallery` |
-| 技术研究 | `/{locale}/research` |
+| 内容             | 路径                 |
+| ---------------- | -------------------- |
+| 首页与 M4 启动器 | `/{locale}`          |
+| 博客             | `/{locale}/blog`     |
+| 机器人调度       | `/{locale}/fleet`    |
+| 猎鹰任务         | `/{locale}/task`     |
+| 项目视频         | `/{locale}/video`    |
+| 界面图集         | `/{locale}/gallery`  |
+| 技术研究         | `/{locale}/research` |
 
 其中 `{locale}` 为 `zh` 或 `en`。访问博客文章等详情页时，只跟随列表页实际提供的同源链接，不要自行拼接未知路径。
 

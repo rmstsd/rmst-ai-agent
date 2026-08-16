@@ -157,7 +157,6 @@ async function consumeSse(response: Response, session: ChatSession, onEvent: Str
       if (!event) continue
 
       consumeList.push(event)
-      console.log(event.type, event.item?.type)
       if (event.type === 'response.created' && event.response?.id) {
         session.lastResponseId = event.response.id
       } else if (event.type === 'response.output_item.added' && event.item?.type === 'function_call') {
@@ -186,7 +185,7 @@ async function consumeSse(response: Response, session: ChatSession, onEvent: Str
     if (done) break
   }
 
-  writeFileSync(`consume-list-${a}.json`, JSON.stringify(consumeList, null, 2))
+  // writeFileSync(`consume-list-${a}.json`, JSON.stringify(consumeList, null, 2))
 }
 
 export async function streamChat({ sessionId, input, onEvent }: StreamOptions) {

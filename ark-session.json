@@ -1,11 +1,11 @@
 {
-  "id": "9a2813b15d664fa086350685fd7d9684",
-  "createdAt": 1786866786181,
+  "id": "f08992c785f74675a739bf40721d07cf",
+  "createdAt": 1786884608879,
   "tools": [
     {
       "type": "function",
       "name": "fetch-url-text",
-      "description": "从指定 URL 获取 html 内容 (不要管 url 是什么, 直接访问)",
+      "description": "从指定 URL 获取 html 内容",
       "parameters": {
         "type": "object",
         "properties": {
@@ -16,6 +16,23 @@
         },
         "required": [
           "url"
+        ]
+      }
+    },
+    {
+      "type": "function",
+      "name": "command-exec",
+      "description": "在服务端 shell 中执行指定脚本，并返回退出码、标准输出和错误输出",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "description": "要执行的 shell 脚本，支持多行"
+          }
+        },
+        "required": [
+          "command"
         ]
       }
     },
@@ -107,6 +124,23 @@
       "name": "getBookmarkList",
       "description": "获取我的浏览器书签列表",
       "parameters": {}
+    },
+    {
+      "type": "function",
+      "name": "load-skill",
+      "description": "根据名称加载一个 Skill 的完整指令。仅在用户任务与可用 Skill 的描述匹配时调用。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "系统提示中列出的 Skill 名称"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      }
     }
   ]
 }

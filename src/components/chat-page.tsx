@@ -10,7 +10,7 @@ import './chat-page.scss'
 const welcomeMessage: ChatMessage = {
   id: 'welcome',
   role: 'assistant',
-  content: '你好，我是 M4 智能机器人大模型。有什么可以帮你？',
+  content: '你好, 有什么可以帮你？',
   createdAt: Date.now(),
   status: 'done'
 }
@@ -186,7 +186,7 @@ export function ChatPage() {
             <Bot size={20} />
           </span>
           <div>
-            <strong>M4 AI</strong>
+            <strong>AI</strong>
           </div>
         </div>
 
