@@ -1,26 +1,177 @@
 'use client'
 
-import { getSessionMessages, getSessions, initSession, recognizeSpeech, stopMessage, type AiSessionMessage, type AiSessionSummary } from '@/api/ai-api'
+import {
+  getSessionMessages,
+  getSessions,
+  initSession,
+  recognizeSpeech,
+  stopMessage,
+  type AiSessionMessage,
+  type AiSessionSummary
+} from '@/api/ai-api'
 import { blobToDataUrl, recordingToWav } from '@/lib/audio'
-import { DefaultChatTransport, type UIMessage } from 'ai'
+import {
+  DefaultChatTransport,
+  getToolName,
+  isToolUIPart,
+  lastAssistantMessageIsCompleteWithApprovalResponses,
+  type DynamicToolUIPart,
+  type ToolUIPart,
+  type UIMessage
+} from 'ai'
 import { useChat } from '@ai-sdk/react'
-import { Bot, CircleStop, LoaderCircle, MessageSquarePlus, Mic, Send, SquarePen, UserRound } from 'lucide-react'
+import {
+  Bot,
+  Check,
+  CheckCircle2,
+  CircleStop,
+  LoaderCircle,
+  MessageSquarePlus,
+  Mic,
+  Send,
+  SquarePen,
+  UserRound,
+  Wrench,
+  X,
+  XCircle
+} from 'lucide-react'
 import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react'
 import './chat-page.scss'
 
-function getMessageText(message: UIMessage) {
-  return message.parts
-    .filter(part => part.type === 'text')
-    .map(part => part.text)
-    .join('')
+function toUiMessage(message: AiSessionMessage): UIMessage {
+  return message
 }
 
-function toUiMessage(message: AiSessionMessage): UIMessage {
-  return {
-    id: message.id,
-    role: message.role,
-    parts: [{ type: 'text', text: message.text }]
+type ToolPart = ToolUIPart | DynamicToolUIPart
+
+function formatToolValue(value: unknown) {
+  if (value === undefined) return '等待生成...'
+  if (typeof value === 'string') return value
+
+  try {
+    return JSON.stringify(value, null, 2) ?? String(value)
+  } catch {
+    return String(value)
   }
+}
+
+function getToolState(part: ToolPart) {
+  switch (part.state) {
+    case 'input-streaming':
+      return { label: '正在生成参数', status: 'running' }
+    case 'input-available':
+      return { label: '正在执行', status: 'running' }
+    case 'approval-requested':
+      return { label: '等待授权', status: 'waiting' }
+    case 'approval-responded':
+      return {
+        label: part.approval.approved ? '已授权' : '已拒绝',
+        status: part.approval.approved ? 'running' : 'error'
+      }
+    case 'output-available':
+      return { label: '执行完成', status: 'success' }
+    case 'output-error':
+      return { label: '执行失败', status: 'error' }
+    case 'output-denied':
+      return { label: '已拒绝', status: 'error' }
+  }
+}
+
+function ToolCall({
+  part,
+  onApproval
+}: {
+  part: ToolPart
+  onApproval: (approvalId: string, approved: boolean) => Promise<void>
+}) {
+  const toolState = getToolState(part)
+  const hasOutput = part.state === 'output-available'
+  const hasError = part.state === 'output-error'
+
+  return (
+    <section className={`tool-call ${toolState.status}`}>
+      <header className="tool-call-header">
+        <span className="tool-call-icon">
+          <Wrench size={15} />
+        </span>
+        <strong>{part.title || getToolName(part)}</strong>
+        <span className="tool-call-status">
+          {toolState.status === 'running' && <LoaderCircle className="spin" size={14} />}
+          {toolState.status === 'success' && <CheckCircle2 size={14} />}
+          {toolState.status === 'error' && <XCircle size={14} />}
+          {toolState.label}
+        </span>
+      </header>
+      <div className="tool-call-detail">
+        <span>调用参数</span>
+        <pre>{formatToolValue(part.input)}</pre>
+      </div>
+      {part.state === 'approval-requested' && (
+        <div className="tool-approval">
+          <p>该工具需要获得你的允许后才能执行。</p>
+          <div>
+            <button className="tool-reject-button" type="button" onClick={() => onApproval(part.approval.id, false)}>
+              <X size={15} />
+              拒绝
+            </button>
+            <button className="tool-approve-button" type="button" onClick={() => onApproval(part.approval.id, true)}>
+              <Check size={15} />
+              允许执行
+            </button>
+          </div>
+        </div>
+      )}
+      {hasOutput && (
+        <div className="tool-call-detail result">
+          <span>返回结果</span>
+          <pre>{formatToolValue(part.output)}</pre>
+        </div>
+      )}
+      {hasError && (
+        <div className="tool-call-detail error">
+          <span>错误信息</span>
+          <pre>{part.errorText}</pre>
+        </div>
+      )}
+    </section>
+  )
+}
+
+function MessageContent({
+  message,
+  streaming,
+  onApproval
+}: {
+  message: UIMessage
+  streaming: boolean
+  onApproval: (approvalId: string, approved: boolean) => Promise<void>
+}) {
+  const visibleParts = message.parts.filter(part => part.type === 'text' || isToolUIPart(part))
+  const lastPart = visibleParts.at(-1)
+  const showTyping = streaming && (!lastPart || isToolUIPart(lastPart))
+
+  return (
+    <div className="message-content">
+      {visibleParts.map((part, index) => {
+        if (part.type === 'text') {
+          return (
+            <div className="message-text" key={`text-${index}`}>
+              {part.text}
+            </div>
+          )
+        }
+
+        return <ToolCall key={part.toolCallId} part={part} onApproval={onApproval} />
+      })}
+      {showTyping && (
+        <span className="typing-indicator">
+          <i />
+          <i />
+          <i />
+        </span>
+      )}
+    </div>
+  )
 }
 
 export function ChatPage() {
@@ -41,11 +192,10 @@ export function ChatPage() {
       new DefaultChatTransport<UIMessage>({
         api: '/api/ai/chat',
         prepareSendMessagesRequest: ({ messages }) => {
-          const latestMessage = [...messages].reverse().find(message => message.role === 'user')
           return {
             body: {
               sessionId: sessionIdRef.current,
-              message: latestMessage ? getMessageText(latestMessage) : ''
+              messages
             }
           }
         }
@@ -59,12 +209,20 @@ export function ChatPage() {
     status,
     error: chatError,
     clearError,
+    addToolApprovalResponse,
     stop
-  } = useChat<UIMessage>({ id: 'm4-chat', transport })
+  } = useChat<UIMessage>({
+    id: 'm4-chat',
+    transport,
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses
+  })
   const loading = status === 'submitted' || status === 'streaming'
+  const approvalPending = messages.some(message =>
+    message.parts.some(part => isToolUIPart(part) && part.state === 'approval-requested')
+  )
 
   useEffect(() => {
-    startNewSession()
+    // startNewSession()
     return () => mediaStreamRef.current?.getTracks().forEach(track => track.stop())
   }, [])
 
@@ -100,7 +258,7 @@ export function ChatPage() {
 
   async function submitMessage() {
     const content = input.trim()
-    if (!content || loading || !sessionId) return
+    if (!content || loading || approvalPending || !sessionId) return
 
     setInput('')
     setError('')
@@ -148,6 +306,15 @@ export function ChatPage() {
     if (!sessionId) return
     stop()
     await stopMessage(sessionId).catch(() => undefined)
+  }
+
+  async function handleToolApproval(approvalId: string, approved: boolean) {
+    setError('')
+    try {
+      await addToolApprovalResponse({ id: approvalId, approved })
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : String(nextError))
+    }
   }
 
   async function startRecording() {
@@ -205,7 +372,7 @@ export function ChatPage() {
           </div>
         </div>
 
-        <button className="new-chat-button" type="button" onClick={startNewSession} disabled={initializing || loading}>
+        <button className="new-chat-button" type="button" onClick={startNewSession}>
           <MessageSquarePlus size={18} />
           新建对话
         </button>
@@ -269,15 +436,11 @@ export function ChatPage() {
                   <strong>{message.role === 'assistant' ? 'M4 AI' : '你'}</strong>
                   <span>{new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
-                <div className="message-content">
-                  {getMessageText(message) || (message.role === 'assistant' && loading ? (
-                    <span className="typing-indicator">
-                      <i />
-                      <i />
-                      <i />
-                    </span>
-                  ) : null)}
-                </div>
+                <MessageContent
+                  message={message}
+                  streaming={message.role === 'assistant' && loading && message.id === messages.at(-1)?.id}
+                  onApproval={handleToolApproval}
+                />
               </div>
             </article>
           ))}
@@ -290,9 +453,11 @@ export function ChatPage() {
               value={input}
               onChange={event => setInput(event.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={initializing ? '正在初始化会话...' : '输入你的问题'}
+              placeholder={
+                initializing ? '正在初始化会话...' : approvalPending ? '请先处理待审批的工具调用' : '输入你的问题'
+              }
               rows={1}
-              disabled={!sessionId || initializing}
+              disabled={!sessionId || initializing || approvalPending}
             />
             <div className="composer-actions">
               <button
@@ -300,7 +465,7 @@ export function ChatPage() {
                 type="button"
                 title={recording ? '停止录音' : '语音输入'}
                 onClick={recording ? stopRecording : startRecording}
-                disabled={recognizing || loading || !sessionId}
+                disabled={recognizing || loading || approvalPending || !sessionId}
               >
                 {recognizing ? (
                   <LoaderCircle className="spin" size={19} />
@@ -316,7 +481,12 @@ export function ChatPage() {
                   停止
                 </button>
               ) : (
-                <button className="send-button" type="submit" disabled={!input.trim() || !sessionId} title="发送消息">
+                <button
+                  className="send-button"
+                  type="submit"
+                  disabled={!input.trim() || approvalPending || !sessionId}
+                  title="发送消息"
+                >
                   <Send size={18} />
                   发送
                 </button>

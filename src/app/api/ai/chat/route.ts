@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 const requestSchema = z
   .object({
     sessionId: z.string().min(1),
-    message: z.string().trim().min(1).max(20_000)
+    messages: z.array(z.unknown()).min(1).max(500)
   })
   .strict()
 
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    return streamUserMessage(parsed.data.sessionId, parsed.data.message)
+    return await streamUserMessage(parsed.data.sessionId, parsed.data.messages)
   } catch (error) {
     return Response.json({ message: error instanceof Error ? error.message : String(error) }, { status: 500 })
   }

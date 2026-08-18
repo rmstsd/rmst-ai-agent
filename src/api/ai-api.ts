@@ -1,3 +1,5 @@
+import type { UIMessage } from 'ai'
+
 async function readError(response: Response) {
   const result = (await response.json().catch(() => null)) as { message?: string } | null
   return result?.message ?? `请求失败（${response.status}）`
@@ -10,11 +12,7 @@ export interface AiSessionSummary {
   updatedAt: number
 }
 
-export interface AiSessionMessage {
-  id: string
-  role: 'user' | 'assistant'
-  text: string
-}
+export type AiSessionMessage = UIMessage
 
 export async function initSession() {
   const response = await fetch('/api/ai/session', { method: 'POST' })
