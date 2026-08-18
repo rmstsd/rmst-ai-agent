@@ -3,11 +3,38 @@ async function readError(response: Response) {
   return result?.message ?? `请求失败（${response.status}）`
 }
 
+export interface AiSessionSummary {
+  id: string
+  title: string
+  messageCount: number
+  updatedAt: number
+}
+
+export interface AiSessionMessage {
+  id: string
+  role: 'user' | 'assistant'
+  text: string
+}
+
 export async function initSession() {
   const response = await fetch('/api/ai/session', { method: 'POST' })
   if (!response.ok) throw new Error(await readError(response))
   const result = (await response.json()) as { sessionId: string }
   return result.sessionId
+}
+
+export async function getSessions() {
+  const response = await fetch('/api/ai/session')
+  if (!response.ok) throw new Error(await readError(response))
+  const result = (await response.json()) as { sessions: AiSessionSummary[] }
+  return result.sessions
+}
+
+export async function getSessionMessages(sessionId: string) {
+  const response = await fetch(`/api/ai/session/${sessionId}`)
+  if (!response.ok) throw new Error(await readError(response))
+  const result = (await response.json()) as { id: string; messages: AiSessionMessage[] }
+  return result.messages
 }
 
 export async function stopMessage(sessionId: string) {

@@ -11,11 +11,13 @@ import {
   type ModelMessage,
   type ToolSet
 } from 'ai'
+import { stringProperty } from './tools/tool-types'
 
 interface ChatSession {
   id: string
   systemPrompt: string
-  lastResponseId?: string
+  messages: ModelMessage[]
+  updatedAt: number
   tools: ToolSet
   controller?: AbortController
   timeout?: ReturnType<typeof setTimeout>
@@ -48,6 +50,51 @@ function createTools(definitions: ToolDefinitions): ToolSet {
   )
 }
 
+function removeReasoningMessages(messages: ModelMessage[]) {
+  return messages.flatMap<ModelMessage>(message => {
+    if (message.role !== 'assistant' || typeof message.content === 'string') {
+      return [message]
+    }
+
+    const content = message.content.filter(part => part.type !== 'reasoning')
+    return content.length > 0 ? [{ ...message, content } as ModelMessage] : []
+  })
+}
+
+function getMessageText(message: ModelMessage) {
+  if (typeof message.content === 'string') return message.content
+  return message.content
+    .filter(part => part.type === 'text')
+    .map(part => part.text)
+    .join('')
+}
+
+export function listSessions() {
+  return [...sessions.values()]
+    .sort((left, right) => right.updatedAt - left.updatedAt)
+    .map(session => {
+      const firstUserMessage = session.messages.find(message => message.role === 'user')
+      return {
+        id: session.id,
+        title: firstUserMessage ? getMessageText(firstUserMessage) : '新建对话',
+        messageCount: session.messages.filter(message => message.role === 'user' || message.role === 'assistant').length,
+        updatedAt: session.updatedAt
+      }
+    })
+}
+
+export function getSessionMessages(sessionId: string) {
+  const session = requireSession(sessionId)
+  return {
+    id: session.id,
+    messages: session.messages.flatMap((message, index) => {
+      if (message.role !== 'user' && message.role !== 'assistant') return []
+      const text = getMessageText(message)
+      return text ? [{ id: `${session.id}-${index}`, role: message.role, text }] : []
+    })
+  }
+}
+
 export async function createSession() {
   requireArkConfig()
   const capabilities = await loadAiCapabilities()
@@ -55,6 +102,8 @@ export async function createSession() {
   const session: ChatSession = {
     id: newId(),
     systemPrompt: capabilities.systemPrompts.join('|||'),
+    messages: [],
+    updatedAt: Date.now(),
     tools: createTools(capabilities.tools)
   }
 
@@ -101,18 +150,26 @@ export function streamUserMessage(sessionId: string, message: string) {
 
   const userMessage: ModelMessage = { role: 'user', content: message }
 
-  console.log('streamUserMessage start', userMessage)
+  session.tools['get-weather-info'] = {
+    description: '查询天气信息',
+    inputSchema: jsonSchema<Record<string, unknown>>({ city: stringProperty('城市名称') }),
+    execute: input => ({ city: input.city, temperature: '25℃' })
+  }
+
   const result = streamText({
     model: ark.responses(aiConfig.ark.modelId),
     system: session.systemPrompt,
-    messages: [userMessage],
+    messages: [...session.messages, userMessage],
     tools: session.tools,
-    stopWhen: isStepCount(5),
-    providerOptions: session.lastResponseId ? { openai: { previousResponseId: session.lastResponseId } } : undefined,
+    stopWhen: isStepCount(50),
+    providerOptions: { openai: { store: false } },
+    prepareStep: ({ messages, stepNumber }) => (stepNumber === 0 ? undefined : { messages: removeReasoningMessages(messages) }),
     abortSignal: controller.signal,
     onEnd: event => {
       if (session.controller !== controller) return
-      session.lastResponseId = event.response.id
+      session.messages = removeReasoningMessages([...session.messages, userMessage, ...event.responseMessages])
+      session.updatedAt = Date.now()
+
       clearRequest(session, controller)
     },
     onAbort: () => clearRequest(session, controller),
@@ -125,7 +182,7 @@ export function streamUserMessage(sessionId: string, message: string) {
       stream: result.stream,
       tools: session.tools,
       onError: error => {
-        console.log('error', JSON.stringify(error.requestBodyValues.input))
+        // console.log('error', JSON.stringify(error.requestBodyValues.input))
         return error instanceof Error ? error.message : String(error)
       }
     })

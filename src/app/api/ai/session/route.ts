@@ -1,6 +1,10 @@
-import { createSession } from '@/server/ark-client'
+import { createSession, listSessions } from '@/server/ark-client'
 
 export const runtime = 'nodejs'
+
+export async function GET() {
+  return Response.json({ sessions: listSessions() })
+}
 
 export async function POST() {
   try {

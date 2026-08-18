@@ -82,6 +82,10 @@
 }
 
 .sidebar-section {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
   margin-top: 28px;
 
   .sidebar-title {
@@ -90,6 +94,11 @@
     color: #777e83;
     font-size: 11px;
   }
+}
+
+.conversation-list {
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .conversation-item {
@@ -105,10 +114,23 @@
   background: transparent;
   border: 0;
   border-radius: 5px;
+  cursor: pointer;
+
+  span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 
   &.active {
     color: #ffffff;
     background: #303438;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
   }
 }
 

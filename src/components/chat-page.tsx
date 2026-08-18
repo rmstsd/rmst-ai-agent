@@ -1,6 +1,6 @@
 'use client'
 
-import { initSession, recognizeSpeech, stopMessage } from '@/api/ai-api'
+import { getSessionMessages, getSessions, initSession, recognizeSpeech, stopMessage, type AiSessionMessage, type AiSessionSummary } from '@/api/ai-api'
 import { blobToDataUrl, recordingToWav } from '@/lib/audio'
 import { DefaultChatTransport, type UIMessage } from 'ai'
 import { useChat } from '@ai-sdk/react'
@@ -15,8 +15,17 @@ function getMessageText(message: UIMessage) {
     .join('')
 }
 
+function toUiMessage(message: AiSessionMessage): UIMessage {
+  return {
+    id: message.id,
+    role: message.role,
+    parts: [{ type: 'text', text: message.text }]
+  }
+}
+
 export function ChatPage() {
   const [sessionId, setSessionId] = useState('')
+  const [sessions, setSessions] = useState<AiSessionSummary[]>([])
   const [input, setInput] = useState('')
   const [initializing, setInitializing] = useState(true)
   const [recording, setRecording] = useState(false)
@@ -79,6 +88,7 @@ export function ChatPage() {
       setSessionId(nextSessionId)
       sessionIdRef.current = nextSessionId
       setMessages([])
+      setSessions(await getSessions())
       clearError()
       setInput('')
     } catch (nextError) {
@@ -97,8 +107,28 @@ export function ChatPage() {
 
     try {
       await sendMessage({ text: content })
+      setSessions(await getSessions())
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : String(nextError))
+    }
+  }
+
+  async function selectSession(nextSessionId: string) {
+    if (nextSessionId === sessionId || loading || initializing) return
+
+    setInitializing(true)
+    setError('')
+    try {
+      const sessionMessages = await getSessionMessages(nextSessionId)
+      setSessionId(nextSessionId)
+      sessionIdRef.current = nextSessionId
+      setMessages(sessionMessages.map(toUiMessage))
+      clearError()
+      setInput('')
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : String(nextError))
+    } finally {
+      setInitializing(false)
     }
   }
 
@@ -182,10 +212,20 @@ export function ChatPage() {
 
         <div className="sidebar-section">
           <span className="sidebar-title">最近对话</span>
-          <button className="conversation-item active" type="button">
-            <SquarePen size={16} />
-            <span>当前对话</span>
-          </button>
+          <div className="conversation-list">
+            {sessions.map(session => (
+              <button
+                className={`conversation-item ${session.id === sessionId ? 'active' : ''}`}
+                key={session.id}
+                type="button"
+                onClick={() => selectSession(session.id)}
+                disabled={initializing || loading}
+              >
+                <SquarePen size={16} />
+                <span>{session.title}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="sidebar-status">
