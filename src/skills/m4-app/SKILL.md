@@ -14,12 +14,10 @@ xyy-app-key:m4
 请求示例：
 
 ```
-GET http://localhost:5800/api/fleet/scenes/list
+GET http://localhost:5800/api/<url>
 Content-Type: application/json
 xyy-app-id: m4
 xyy-app-key: m4
 ```
 
-## 查询调度场景列表
-
-GET `fleet/scenes/list`
+当需要查询调度场景信息时，参考 references/scene.md 中的文档。

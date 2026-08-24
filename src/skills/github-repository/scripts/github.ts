@@ -21,8 +21,6 @@ async function setRepoPrivate({ repo, visibility }: { repo: string; visibility: 
     visibility,
     headers: githubApiHeaders
   })
-
-  console.log(`仓库  ${data.full_name} 当前可见性：${data.visibility}`)
 }
 
 /** 分页查询当前账号拥有的全部仓库，不包含组织或协作仓库。 */

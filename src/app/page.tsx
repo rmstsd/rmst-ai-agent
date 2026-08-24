@@ -23,10 +23,47 @@ function makeId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
+function getContentPartText(value: unknown): string {
+  if (typeof value === 'string') {
+    return value
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(getContentPartText).join('')
+  }
+
+  if (typeof value !== 'object' || value === null) {
+    return ''
+  }
+
+  const part = value as Record<string, unknown>
+  for (const key of ['text', 'content', 'value', 'delta', 'part']) {
+    const text = getContentPartText(part[key])
+    if (text) {
+      return text
+    }
+  }
+
+  return ''
+}
+
+function getStreamText(payload: Record<string, unknown>) {
+  if (payload.type === 'response.output_text.delta' && typeof payload.delta === 'string') {
+    return { text: payload.delta, isContentPart: false }
+  }
+
+  if (payload.type === 'response.content_part.added' || payload.type === 'response.content_part.done') {
+    return { text: getContentPartText(payload.part), isContentPart: true }
+  }
+
+  return undefined
+}
+
 function parseStreamChunk(chunk: string) {
   const frames = chunk.split(/\r?\n\r?\n/)
   const remaining = frames.pop() || ''
   let text = ''
+  let contentPart = ''
   const toolEvents: Array<{ phase: 'call' | 'result'; name: string; content: string; approvalId?: string; approved?: boolean }> =
     []
 
@@ -55,14 +92,32 @@ function parseStreamChunk(chunk: string) {
           approved: parsed.approved
         })
       } else {
-        text += parsed.delta?.text || parsed.output_text?.delta || parsed.text || ''
+        const streamText = getStreamText(parsed)
+        if (!streamText) {
+          continue
+        }
+        if (streamText.isContentPart) {
+          contentPart += streamText.text
+        } else {
+          text += streamText.text
+        }
       }
     } catch {
       text += value
     }
   }
 
-  return { remaining, text, toolEvents }
+  return { remaining, text, contentPart, toolEvents }
+}
+
+function mergeContentPart(current: string, next: string) {
+  if (!current || next === current) {
+    return next || current
+  }
+  if (next.startsWith(current)) {
+    return next
+  }
+  return current + next
 }
 
 export default function Home() {
@@ -121,7 +176,7 @@ export default function Home() {
       const decoder = new TextDecoder()
       let streamBuffer = ''
       let assistantText = ''
-      const assistantId = makeId()
+      let assistantId = makeId()
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
@@ -130,6 +185,11 @@ export default function Home() {
         streamBuffer = parsed.remaining
 
         if (parsed.toolEvents.length > 0) {
+          if (parsed.toolEvents.some(toolEvent => toolEvent.phase === 'call')) {
+            assistantText = ''
+            assistantId = makeId()
+          }
+
           setMessages(current => [
             ...current,
             ...parsed.toolEvents.map(toolEvent => ({
@@ -158,11 +218,25 @@ export default function Home() {
             return current.map(message => (message.id === assistantId ? assistantMessage : message))
           })
         }
+        if (parsed.contentPart) {
+          assistantText = mergeContentPart(assistantText, parsed.contentPart)
+          setMessages(current => {
+            const assistantMessage = { id: assistantId, role: 'assistant' as const, content: assistantText, time: getTime() }
+            const existingIndex = current.findIndex(message => message.id === assistantId)
+            if (existingIndex === -1) return [...current, assistantMessage]
+            return current.map(message => (message.id === assistantId ? assistantMessage : message))
+          })
+        }
         scrollToBottom()
       }
       streamBuffer += decoder.decode()
       const finalParsed = parseStreamChunk(`${streamBuffer}\n\n`)
       if (finalParsed.toolEvents.length > 0) {
+        if (finalParsed.toolEvents.some(toolEvent => toolEvent.phase === 'call')) {
+          assistantText = ''
+          assistantId = makeId()
+        }
+
         setMessages(current => [
           ...current,
           ...finalParsed.toolEvents.map(toolEvent => ({
@@ -183,6 +257,15 @@ export default function Home() {
       }
       if (finalParsed.text) {
         assistantText += finalParsed.text
+        setMessages(current => {
+          const assistantMessage = { id: assistantId, role: 'assistant' as const, content: assistantText, time: getTime() }
+          const existingIndex = current.findIndex(message => message.id === assistantId)
+          if (existingIndex === -1) return [...current, assistantMessage]
+          return current.map(message => (message.id === assistantId ? assistantMessage : message))
+        })
+      }
+      if (finalParsed.contentPart) {
+        assistantText = mergeContentPart(assistantText, finalParsed.contentPart)
         setMessages(current => {
           const assistantMessage = { id: assistantId, role: 'assistant' as const, content: assistantText, time: getTime() }
           const existingIndex = current.findIndex(message => message.id === assistantId)
@@ -213,19 +296,6 @@ export default function Home() {
         </button>
         <div className="sidebar-section">
           <p className="section-label">最近对话</p>
-          <button className="conversation-item is-active" type="button">
-            <MessageCircle size={17} />
-            <span>本周工作计划</span>
-            <MoreHorizontal className="conversation-more" size={16} />
-          </button>
-          <button className="conversation-item" type="button">
-            <MessageCircle size={17} />
-            <span>产品灵感整理</span>
-          </button>
-          <button className="conversation-item" type="button">
-            <MessageCircle size={17} />
-            <span>旅行清单</span>
-          </button>
         </div>
         <div className="sidebar-footer">
           <div className="profile-avatar">林</div>
@@ -266,7 +336,7 @@ export default function Home() {
                   <div className="tool-card-header">
                     <span className={`tool-status ${message.toolPhase}`} />
                     <strong>{message.toolPhase === 'call' ? '调用工具' : '工具结果'}</strong>
-                    <code>{message.toolName}</code>
+                    <code>工具名字: {message.toolName}</code>
                   </div>
                   <pre>{message.content}</pre>
                   {message.toolPhase === 'call' && message.approvalStatus === 'pending' && (

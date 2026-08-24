@@ -1,4 +1,5 @@
 import { loadSkillContent } from './skill'
+import { readFile } from 'node:fs/promises'
 
 type ToolArguments = Record<string, unknown>
 
@@ -32,7 +33,7 @@ const tools: ToolDefinition[] = [
   {
     type: 'function',
     name: 'load-skill',
-    description: '加载指定 skill',
+    description: '加载指定 skill.md 文件的内容',
     parameters: {
       type: 'object',
       properties: {
@@ -46,6 +47,25 @@ const tools: ToolDefinition[] = [
     executor: async (_args: ToolArguments) => {
       const skillName = _args.skillName as string
       return await loadSkillContent(skillName)
+    }
+  },
+  {
+    type: 'function',
+    name: 'read-skill-doc',
+    description: '当需要读取指定 skill 里的其他文件的内容时, 调用此工具',
+    parameters: {
+      type: 'object',
+      properties: {
+        path: {
+          type: 'string',
+          description: '文件的路径'
+        }
+      },
+      required: ['path']
+    },
+    executor: async (_args: ToolArguments) => {
+      const path = _args.path as string
+      return await readFile(path, 'utf-8')
     }
   },
   {

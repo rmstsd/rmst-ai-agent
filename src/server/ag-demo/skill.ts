@@ -1,5 +1,5 @@
 import { readFile, readdir } from 'node:fs/promises'
-import { join, resolve } from 'node:path'
+import { join, relative, resolve } from 'node:path'
 import { parse } from 'yaml'
 
 const skillFileName = 'SKILL.md'
@@ -114,6 +114,33 @@ async function loadSkills() {
   return skills
 }
 
+async function listSkillFiles(baseDirectory: string) {
+  const files: string[] = []
+
+  async function visit(directory: string) {
+    const entries = await readdir(directory, { withFileTypes: true })
+
+    await Promise.all(
+      entries.map(async entry => {
+        if (entry.name.toLowerCase() === skillFileName.toLowerCase()) return
+
+        const path = join(directory, entry.name)
+        if (entry.isDirectory()) {
+          await visit(path)
+          return
+        }
+
+        if (entry.isFile()) {
+          files.push(relative(baseDirectory, path).replaceAll('\\', '/'))
+        }
+      })
+    )
+  }
+
+  await visit(baseDirectory)
+  return files.sort()
+}
+
 const skills = await loadSkills()
 
 export async function loadSkillContent(name: string) {
@@ -122,6 +149,8 @@ export async function loadSkillContent(name: string) {
     throw new Error(`Skill 不存在：${name}`)
   }
 
+  const files = await listSkillFiles(skill.baseDirectory)
+
   return [
     `<skill_content name="${escapeXml(skill.name)}">`,
     `  <name>${escapeXml(skill.name)}</name>`,
@@ -129,7 +158,10 @@ export async function loadSkillContent(name: string) {
     skill.content,
     '  </instructions>',
     `  <base_directory>${escapeXml(skill.baseDirectory)}</base_directory>`,
-    '  <path_resolution>从 base_directory 中解析此 Skill 的相对路径。</path_resolution>',
+    '  <available_files>',
+    ...files.map(file => `    <file>${escapeXml(file)}</file>`),
+    '  </available_files>',
+    '  <path_resolution>从 base_directory 中解析此 Skill 的绝对路径。</path_resolution>',
     '</skill_content>'
   ].join('\n')
 }

@@ -235,7 +235,6 @@ function getArkRequestBody(
     requestInput.unshift({ role: 'system', content: createSystemPrompt() })
   }
 
-  console.log(requestInput)
   return {
     model: aiConfig.ark.modelId,
     previous_response_id: previousResponseId,
@@ -310,7 +309,6 @@ function forwardStream(
           return
         }
 
-        console.log('eventBuffer', eventBuffer)
         eventBuffer += decoder.decode()
         const parsed = parseResponseEvents(`${eventBuffer}\n\n`, toolCalls)
         eventBuffer = parsed.remaining
