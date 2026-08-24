@@ -338,7 +338,7 @@ export default function Home() {
                     <strong>{message.toolPhase === 'call' ? '调用工具' : '工具结果'}</strong>
                     <code>工具名字: {message.toolName}</code>
                   </div>
-                  <pre>{message.content}</pre>
+                  <pre style={{ maxHeight: 300, overflow: 'auto' }}> {message.content}</pre>
                   {message.toolPhase === 'call' && message.approvalStatus === 'pending' && (
                     <div className="tool-approval-actions">
                       <button type="button" onClick={() => approveTool(message, true)}>
