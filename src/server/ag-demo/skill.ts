@@ -5,12 +5,25 @@ import { parse } from 'yaml'
 const skillFileName = 'SKILL.md'
 const skillNamePattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
+const baseSystemPrompt = [
+  '你是 M4 AI 助手。',
+  '只能调用系统提供的工具，不要调用未注册或不存在的工具。',
+  '如果工具调用所需的参数不完整，先向用户询问缺失参数。',
+  '执行工具前遵循工具和已加载 Skill 中的全部约束；不要猜测工具结果或 Skill 中未提供的信息。',
+  '如果已经加载过了某个 Skill，不要重复加载。'
+].join('\n')
+
 export interface SkillDefinition {
   name: string
   description: string
   location: string
   baseDirectory: string
   content: string
+}
+
+export type SkillCapabilities = {
+  skills: SkillDefinition[]
+  systemPrompt: string
 }
 
 function getSkillsDirectory() {
@@ -81,7 +94,7 @@ async function loadSkillDirectory(skillsDirectory: string, directoryName: string
   }
 }
 
-export async function loadSkills() {
+async function loadSkills() {
   const skillsDirectory = getSkillsDirectory()
   const entries = await readdir(skillsDirectory, { withFileTypes: true })
   const skills = (
@@ -101,8 +114,9 @@ export async function loadSkills() {
   return skills
 }
 
-export async function executeSkillTool(name: string) {
-  const skills = await loadSkills()
+const skills = await loadSkills()
+
+export async function loadSkillContent(name: string) {
   const skill = skills.find(item => item.name === name)
   if (!skill) {
     throw new Error(`Skill 不存在：${name}`)
@@ -118,16 +132,50 @@ export async function executeSkillTool(name: string) {
   ].join('\n')
 }
 
+function escapeXml(value: string) {
+  const entities: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&apos;'
+  }
+
+  return value.replace(/[<&>"']/g, character => entities[character])
+}
+
 export function createSkillsSystemPrompt(skills: SkillDefinition[]) {
   if (skills.length === 0) {
-    return '当前没有可用的 Skills。'
+    return '<available_skills>当前没有可用的 Skills。</available_skills>'
   }
 
   return [
-    '可用 Skills：',
-    ...skills.map(skill => `- ${skill.name}: ${skill.description}`),
+    '<available_skills>',
+    ...skills.map(skill => [
+      '  <skill>',
+      `    <name>${escapeXml(skill.name)}</name>`,
+      `    <description>${escapeXml(skill.description)}</description>`,
+      '  </skill>'
+    ].join('\n')),
+    '</available_skills>',
     '',
-    '当用户任务与某个 Skill 的描述匹配时，先调用 load-skill 工具加载完整内容，再遵循其中的指令完成任务。',
-    '不要根据上面的简短描述猜测 Skill 的具体步骤。Skill 中的相对路径以工具返回的 Base directory 为基准。'
+    '<skill_usage_rules>',
+    '  <rule>当用户任务与某个 Skill 的描述匹配时，先调用 load-skill 工具加载完整内容，再遵循其中的指令完成任务。</rule>',
+    '  <rule>不要根据上面的简短描述猜测 Skill 的具体步骤。</rule>',
+    '  <rule>Skill 中的相对路径以工具返回的 Base directory 为基准。</rule>',
+    '</skill_usage_rules>'
   ].join('\n')
+}
+
+/** 根据已读取的技能创建 Agent 使用的完整系统提示词。 */
+export function createSystemPrompt() {
+  return [baseSystemPrompt, createSkillsSystemPrompt(skills)].join('\n\n')
+}
+
+/** 一次性读取 Agent 初始化所需的技能列表和系统提示词。 */
+export async function loadSkillCapabilities(): Promise<SkillCapabilities> {
+  return {
+    skills,
+    systemPrompt: createSystemPrompt()
+  }
 }
