@@ -1,3 +1,5 @@
+import { loadSkillContent } from './skill'
+
 type ToolArguments = Record<string, unknown>
 
 type ToolDefinition = {
@@ -43,7 +45,7 @@ const tools: ToolDefinition[] = [
     },
     executor: async (_args: ToolArguments) => {
       const skillName = _args.skillName as string
-      return `加载技能 ${skillName}`
+      return await loadSkillContent(skillName)
     }
   },
   {
@@ -95,7 +97,7 @@ const tools: ToolDefinition[] = [
         headers,
         body: body ? JSON.stringify(JSON.parse(body)) : undefined
       })
-      return await response.json()
+      return await response.text()
     }
   }
 ]

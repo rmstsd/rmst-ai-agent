@@ -1,7 +1,10 @@
 import { aiConfig } from '@/config/ai-config'
 import { createApprovalId, executeToolCall, ToolCall, toolsList } from './tool'
+import { createSystemPrompt } from './skill'
 
-type ArkResponseInput = { role: 'user'; content: string } | { type: 'function_call_output'; call_id: string; output: string }
+type ArkResponseInput =
+  | { role: 'user' | 'system'; content: string }
+  | { type: 'function_call_output'; call_id: string; output: string }
 
 type ExecutedToolCall = {
   call: ToolCall
@@ -226,9 +229,16 @@ function getArkRequestBody(
 
   const session = sessionMap.get(sessionId)
 
+  previousResponseId = previousResponseId || session?.previousResponseId || undefined
+
+  if (!previousResponseId) {
+    requestInput.unshift({ role: 'system', content: createSystemPrompt() })
+  }
+
+  console.log(requestInput)
   return {
     model: aiConfig.ark.modelId,
-    previous_response_id: previousResponseId || session?.previousResponseId || undefined,
+    previous_response_id: previousResponseId,
     input: requestInput,
     thinking: { type: 'disabled' },
     caching: { type: aiConfig.ark.caching ? 'enabled' : 'disabled' },
@@ -290,7 +300,6 @@ function forwardStream(
     async pull(controller) {
       try {
         const result = await reader.read()
-        console.log('result.done', result.done)
         if (!result.done) {
           const value = decoder.decode(result.value, { stream: true })
           eventBuffer += value

@@ -123,11 +123,13 @@ export async function loadSkillContent(name: string) {
   }
 
   return [
-    `<skill_content name="${skill.name}">`,
+    `<skill_content name="${escapeXml(skill.name)}">`,
+    `  <name>${escapeXml(skill.name)}</name>`,
+    '  <instructions>',
     skill.content,
-    '',
-    `此 skill 的基本目录: ${skill.baseDirectory}`,
-    '从上面的基本目录中解析此 skill 中的相对路径。',
+    '  </instructions>',
+    `  <base_directory>${escapeXml(skill.baseDirectory)}</base_directory>`,
+    '  <path_resolution>从 base_directory 中解析此 Skill 的相对路径。</path_resolution>',
     '</skill_content>'
   ].join('\n')
 }
@@ -151,12 +153,14 @@ export function createSkillsSystemPrompt(skills: SkillDefinition[]) {
 
   return [
     '<available_skills>',
-    ...skills.map(skill => [
-      '  <skill>',
-      `    <name>${escapeXml(skill.name)}</name>`,
-      `    <description>${escapeXml(skill.description)}</description>`,
-      '  </skill>'
-    ].join('\n')),
+    ...skills.map(skill =>
+      [
+        '  <skill>',
+        `    <name>${escapeXml(skill.name)}</name>`,
+        `    <description>${escapeXml(skill.description)}</description>`,
+        '  </skill>'
+      ].join('\n')
+    ),
     '</available_skills>',
     '',
     '<skill_usage_rules>',
@@ -170,12 +174,4 @@ export function createSkillsSystemPrompt(skills: SkillDefinition[]) {
 /** 根据已读取的技能创建 Agent 使用的完整系统提示词。 */
 export function createSystemPrompt() {
   return [baseSystemPrompt, createSkillsSystemPrompt(skills)].join('\n\n')
-}
-
-/** 一次性读取 Agent 初始化所需的技能列表和系统提示词。 */
-export async function loadSkillCapabilities(): Promise<SkillCapabilities> {
-  return {
-    skills,
-    systemPrompt: createSystemPrompt()
-  }
 }
