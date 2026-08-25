@@ -1,0 +1,1 @@
+{"entityName":"ContainerTransportOrder","query":{"type":"General","field1":"id","operator":"In","value":["CTO20260507-0001","CTO20260825-0001"]},"update":{"status":"Created"}}  

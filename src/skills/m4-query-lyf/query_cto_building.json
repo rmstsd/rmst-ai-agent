@@ -1,0 +1,1 @@
+{"entityName":"ContainerTransportOrder","query":{"type":"General","field1":"status","operator":"Eq","value":"Building"},"pageNo":1,"pageSize":50}  

@@ -1,0 +1,1 @@
+{"entityName":"FalconTaskRecord","query":{"type":"General","field1":"status","operator":"Eq","value":140},"pageNo":1,"pageSize":50,"sort":["-createdOn"]}  
