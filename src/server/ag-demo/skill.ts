@@ -6,7 +6,7 @@ const skillFileName = 'SKILL.md'
 const skillNamePattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
 const baseSystemPrompt = [
-  '你是 M4 AI 助手。',
+  '你是 M4 AI 助手。始终使用简体中文回答用户的问题。',
   '只能调用系统提供的工具，不要调用未注册或不存在的工具。',
   '如果工具调用所需的参数不完整，先向用户询问缺失参数。',
   '执行工具前遵循工具和已加载 Skill 中的全部约束；不要猜测工具结果或 Skill 中未提供的信息。',
@@ -161,7 +161,7 @@ export async function loadSkillContent(name: string) {
     '  <available_files>',
     ...files.map(file => `    <file>${escapeXml(file)}</file>`),
     '  </available_files>',
-    '  <path_resolution>从 base_directory 中解析此 Skill 的绝对路径。</path_resolution>',
+    '  <path_resolution>Skill 内其他文件的绝对路径以 base_directory 为基准。</path_resolution>',
     '</skill_content>'
   ].join('\n')
 }

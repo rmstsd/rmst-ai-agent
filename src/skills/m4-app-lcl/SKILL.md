@@ -1,5 +1,5 @@
 ---
-name: m4-app
+name: m4-app-lcl
 description: 当想查询 调度场景信息，机器人状态，发送运单时，调用此 Skill。
 ---
 

@@ -1,3 +1,4 @@
+import { exec } from 'node:child_process'
 import { loadSkillContent } from './skill'
 import { readFile } from 'node:fs/promises'
 
@@ -118,6 +119,42 @@ const tools: ToolDefinition[] = [
         body: body ? JSON.stringify(JSON.parse(body)) : undefined
       })
       return await response.text()
+    }
+  },
+  {
+    type: 'function',
+    name: 'exec-shell',
+    description: '执行 shell 命令',
+    parameters: {
+      type: 'object',
+      properties: {
+        command: {
+          type: 'string',
+          description: 'shell 命令字符串'
+        }
+      },
+      required: ['command']
+    },
+    executor: async (_args: ToolArguments) => {
+      const command = _args.command as string
+
+      if (!command || !command.trim()) {
+        throw new Error('shell 命令不能为空')
+      }
+
+      // 执行 shell 命令，并将回调结果转换为 Promise，便于统一处理工具调用。
+      return await new Promise<string>((resolve, reject) => {
+        exec(command, (error, stdout, stderr) => {
+          const output = [stdout, stderr].filter(Boolean).join('\n')
+
+          if (error) {
+            reject(new Error(output.trim() || error.message))
+            return
+          }
+
+          resolve(output)
+        })
+      })
     }
   }
 ]

@@ -1,0 +1,4 @@
+interface:
+  display_name: M4 Operations
+  short_description: Operate M4 scenes, transport orders, and runtime status.
+  default_prompt: Use M4 tools to validate a scene, create or inspect a transport order, and explain dispatch status.
