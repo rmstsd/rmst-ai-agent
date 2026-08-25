@@ -178,7 +178,8 @@ function parseResponseEvents(buffer: string, toolCalls: Map<string, ToolCall>) {
       const payload = JSON.parse(data)
       responseId = getResponseId(payload) || responseId
       collectToolCalls(payload, toolCalls)
-    } catch {
+    } catch (error) {
+      console.log('error parseResponseEvents: ', error)
       // SSE 数据可能跨 chunk 到达，未完成的 JSON 留到下一个 chunk 继续解析。
     }
   }
@@ -370,6 +371,7 @@ function forwardStream(
         cleanup()
         controller.close()
       } catch (error) {
+        console.log('error parseResponseEvents: ', error)
         cleanup()
         controller.error(error instanceof Error ? error : new Error('处理 Agent 流失败'))
       }
@@ -411,6 +413,7 @@ export async function streamAgentConversation(request: AgentConversationRequest)
       headers: streamHeaders
     })
   } catch (error) {
+    console.log('error streamAgentConversation: ', error)
     cleanup()
 
     if (error instanceof AgentCoreError) {

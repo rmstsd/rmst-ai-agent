@@ -276,6 +276,7 @@ export default function Home() {
         })
       }
     } catch (error) {
+      console.log('error', error)
       setMessages(current => [...current, { id: makeId(), role: 'assistant', content: error.message, time: getTime() }])
     } finally {
       setIsSending(false)
