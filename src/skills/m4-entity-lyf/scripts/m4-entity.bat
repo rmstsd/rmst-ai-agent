@@ -179,9 +179,9 @@ exit /b 0
 
 :usage
 echo Usage:
-echo   skill\m4-entity1\scripts\m4-entity.bat get ^<business-object-name^>
-echo   skill\m4-entity1\scripts\m4-entity.bat list
-echo   skill\m4-entity1\scripts\m4-entity.bat save ^<json-file-path^>
+echo   skill\m4-entity\scripts\m4-entity.bat get ^<business-object-name^>
+echo   skill\m4-entity\scripts\m4-entity.bat list
+echo   skill\m4-entity\scripts\m4-entity.bat save ^<json-file-path^>
 echo.
 echo Commands:
 echo   get   Query one business object from GET /api/meta/entities.

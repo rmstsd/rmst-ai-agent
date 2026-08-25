@@ -193,7 +193,7 @@ function waitForToolApproval(sessionId: string, toolCall: ToolCall, approvalId: 
     const timer = setTimeout(() => {
       approvalMap.delete(approvalId)
       resolve(false)
-    }, 5 * 60_000)
+    }, 20 * 60_000)
 
     approvalMap.set(approvalId, { sessionId, toolCall, resolve, timer })
 

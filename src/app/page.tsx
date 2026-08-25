@@ -15,6 +15,8 @@ type Message = {
   approvalStatus?: 'pending' | 'approved' | 'rejected'
 }
 
+const baseUrl = 'http://172.16.87.41:8666'
+
 function getTime() {
   return new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit' }).format(new Date())
 }
@@ -139,7 +141,7 @@ export default function Home() {
     )
 
     try {
-      const response = await fetch('/api/chat/approve', {
+      const response = await fetch(`${baseUrl}/api/chat/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId, approvalId: message.approvalId, approved })
@@ -165,7 +167,7 @@ export default function Home() {
     scrollToBottom()
 
     try {
-      const response = await fetch('/api/chat', {
+      const response = await fetch(`${baseUrl}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId, message: content })
