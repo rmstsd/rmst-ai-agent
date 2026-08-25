@@ -1,5 +1,5 @@
 import { readFile, readdir } from 'node:fs/promises'
-import { join, relative, resolve } from 'node:path'
+import { join, resolve } from 'node:path'
 import { parse } from 'yaml'
 
 const skillFileName = 'SKILL.md'
@@ -131,7 +131,7 @@ async function listSkillFiles(baseDirectory: string) {
         }
 
         if (entry.isFile()) {
-          files.push(relative(baseDirectory, path).replaceAll('\\', '/'))
+          files.push(resolve(path).replaceAll('\\', '/'))
         }
       })
     )
@@ -161,7 +161,6 @@ export async function loadSkillContent(name: string) {
     '  <available_files>',
     ...files.map(file => `    <file>${escapeXml(file)}</file>`),
     '  </available_files>',
-    '  <path_resolution>Skill 内其他文件的绝对路径以 base_directory 为基准。</path_resolution>',
     '</skill_content>'
   ].join('\n')
 }
