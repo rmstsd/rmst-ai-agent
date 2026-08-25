@@ -1,0 +1,2 @@
+Error: POST /api/meta/entity returned HTTP 403. 
+{"permission":"需要管理员权限"}

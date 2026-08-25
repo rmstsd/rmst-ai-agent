@@ -141,7 +141,7 @@ async function listSkillFiles(baseDirectory: string) {
   return files.sort()
 }
 
-const skills = await loadSkills()
+export const skills = await loadSkills()
 
 export async function loadSkillContent(name: string) {
   const skill = skills.find(item => item.name === name)

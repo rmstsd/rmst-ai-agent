@@ -38,7 +38,7 @@ Content-Type: application/json
 终端脚本调用方式：
 
 ```bat
-skill\m4-entity\scripts\m4-entity.bat save <json文件路径>
+scripts\m4-entity.bat save <json文件路径>
 ```
 
 ### 请求报文示例
@@ -563,13 +563,13 @@ skill\m4-entity\scripts\m4-entity.bat save <json文件路径>
 查询接口一次返回全部业务对象，Skill 应从返回 JSON 中按 `name` 取出目标业务对象，而不是假设存在按名称查询的接口。
 
 ```bat
-skill\m4-entity\scripts\m4-entity.bat get <业务对象名>
+scripts\m4-entity.bat get <业务对象名>
 ```
 
 ### 查询全部业务对象
 
 ```bat
-skill\m4-entity\scripts\m4-entity.bat list
+scripts\m4-entity.bat list
 ```
 
 ### 请求

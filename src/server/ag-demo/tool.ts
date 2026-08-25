@@ -222,6 +222,7 @@ export async function executeToolCall(toolCall: ToolCall, approved: boolean) {
   try {
     const result = await executeTool(toolCall.name, args)
     output = serializeToolOutput(result)
+    output = output.slice(0, 100_000)
   } catch (error) {
     output = error instanceof Error ? `工具执行失败：${error.message}` : '工具执行失败'
   }
