@@ -5,17 +5,5 @@ export const aiConfig = {
     modelId: 'doubao-seed-2-0-mini-260428',
     timeoutMs: 60_000,
     caching: false
-  },
-  m4: {
-    baseUrl: 'http://localhost:5800',
-    appId: 'm4',
-    appKey: 'm4',
-    timeoutMs: 60_000
-  },
-  speech: {
-    appId: '',
-    token: '',
-    resourceId: 'volc.bigasr.auc_turbo',
-    hotWords: ['密集库', '线边库', '库位', '0']
   }
 } as const
