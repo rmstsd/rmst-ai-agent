@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './tailwind.css'
 import './globals.scss'
+import { ClientOnly } from '@/utils/ClientOnly'
 
 export const metadata: Metadata = {
   title: 'M4 AI Agent',
@@ -10,7 +11,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="zh-CN">
-      <body>{children}</body>
+      <body>
+        <ClientOnly>{children}</ClientOnly>
+      </body>
     </html>
   )
 }
