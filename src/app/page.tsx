@@ -1,10 +1,12 @@
 'use client'
 
-import { initSession, sendMessage, stopMessage } from '@/api/ai-api'
-import type { ChatMessage, ChatStreamEvent } from '@/types/ai'
-import { Bot, CircleStop, MessageSquarePlus, Send, Sparkles, UserRound } from 'lucide-react'
+import { getSession, initSession, sendApproval, sendMessage, stopMessage } from '@/api/ai-api'
+import type { ChatMessage, ChatStreamEvent, PendingApproval } from '@/types/ai'
+import { Bot, CircleStop, MessageSquarePlus, Send, ShieldCheck, UserRound, X } from 'lucide-react'
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react'
 import './chat-page.scss'
+
+const sessionStorageKey = 'ark-agent-session'
 
 const welcomeMessage: ChatMessage = {
   id: 'welcome',
@@ -15,20 +17,45 @@ const welcomeMessage: ChatMessage = {
 }
 
 function createMessage(role: ChatMessage['role'], content: string): ChatMessage {
-  return { id: crypto.randomUUID(), role, content, createdAt: Date.now(), status: role === 'assistant' ? 'streaming' : 'done' }
+  return {
+    id: crypto.randomUUID(),
+    role,
+    content,
+    createdAt: Date.now(),
+    status: role === 'assistant' ? 'streaming' : 'done'
+  }
+}
+
+function withWelcome(messages: ChatMessage[]) {
+  if (messages.some(message => message.id === welcomeMessage.id || message.content === welcomeMessage.content)) return messages
+  return [{ ...welcomeMessage, id: crypto.randomUUID(), createdAt: Date.now() }, ...messages]
+}
+
+function formatArgs(args: unknown) {
+  if (args === undefined) return ''
+  try {
+    return JSON.stringify(args, null, 2)
+  } catch {
+    return String(args)
+  }
 }
 
 export default function ChatPage() {
   const [sessionId, setSessionId] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([welcomeMessage])
+  const [pendingApproval, setPendingApproval] = useState<PendingApproval>()
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [initializing, setInitializing] = useState(true)
   const [error, setError] = useState('')
   const messagesRef = useRef<HTMLDivElement>(null)
+  const initializedRef = useRef(false)
+  const assistantMessageIdRef = useRef('')
 
   useEffect(() => {
-    startNewSession()
+    if (initializedRef.current) return
+    initializedRef.current = true
+    restoreSession()
   }, [])
 
   useEffect(() => {
@@ -36,15 +63,55 @@ export default function ChatPage() {
     if (element) element.scrollTop = element.scrollHeight
   }, [messages])
 
+  useEffect(() => {
+    if (!sessionId || initializing) return
+    localStorage.setItem(sessionStorageKey, sessionId)
+  }, [initializing, sessionId])
+
+  async function restoreSession() {
+    setInitializing(true)
+    setError('')
+    const saved = readStoredSession()
+
+    if (saved) {
+      try {
+        const snapshot = await getSession(saved)
+        setSessionId(snapshot.sessionId)
+        setMessages(withWelcome(snapshot.messages))
+        setPendingApproval(snapshot.pendingApproval)
+        setInitializing(false)
+        return
+      } catch {
+        localStorage.removeItem(sessionStorageKey)
+      }
+    }
+
+    await startNewSession()
+  }
+
+  function readStoredSession() {
+    try {
+      const raw = localStorage.getItem(sessionStorageKey)
+      if (!raw) return undefined
+      return raw
+    } catch {
+      return undefined
+    }
+  }
+
   async function startNewSession() {
     setInitializing(true)
     setError('')
+    setPendingApproval(undefined)
+    assistantMessageIdRef.current = ''
     try {
       const nextSessionId = await initSession()
       setSessionId(nextSessionId)
       setMessages([{ ...welcomeMessage, id: crypto.randomUUID(), createdAt: Date.now() }])
       setInput('')
+      localStorage.removeItem(sessionStorageKey)
     } catch (nextError) {
+      setSessionId('')
       setError(nextError instanceof Error ? nextError.message : String(nextError))
     } finally {
       setInitializing(false)
@@ -52,23 +119,35 @@ export default function ChatPage() {
   }
 
   function updateAssistantMessage(id: string, event: ChatStreamEvent) {
+    if (event.type === 'Approval') setPendingApproval(event.approval)
+    if (event.type === 'Error') setError(event.message)
+
     setMessages(current =>
       current.map(message => {
         if (message.id !== id) return message
         if (event.type === 'Text') return { ...message, content: message.content + event.text }
         if (event.type === 'Error') return { ...message, content: message.content || event.message, status: 'error' }
-        if (event.type === 'Done') return { ...message, status: 'done' }
+        if (event.type === 'Done') return { ...message, status: event.interrupted ? 'streaming' : 'done' }
         return message
       })
     )
   }
 
+  function ensureAssistantMessage() {
+    if (assistantMessageIdRef.current) return assistantMessageIdRef.current
+    const assistantMessage = createMessage('assistant', '')
+    assistantMessageIdRef.current = assistantMessage.id
+    setMessages(current => [...current, assistantMessage])
+    return assistantMessage.id
+  }
+
   async function submitMessage() {
     const content = input.trim()
-    if (!content || loading || !sessionId) return
+    if (!content || loading || !sessionId || pendingApproval) return
 
     const userMessage = createMessage('user', content)
     const assistantMessage = createMessage('assistant', '')
+    assistantMessageIdRef.current = assistantMessage.id
     setMessages(current => [...current, userMessage, assistantMessage])
     setInput('')
     setError('')
@@ -78,6 +157,30 @@ export default function ChatPage() {
       await sendMessage(sessionId, content, event => updateAssistantMessage(assistantMessage.id, event))
     } catch (nextError) {
       updateAssistantMessage(assistantMessage.id, {
+        type: 'Error',
+        message: nextError instanceof Error ? nextError.message : String(nextError)
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function approvePending(approved: boolean) {
+    if (!pendingApproval || !sessionId || loading) return
+    const assistantId = ensureAssistantMessage()
+    const decisions = pendingApproval.requests.map(request =>
+      approved && request.allowedDecisions.includes('approve')
+        ? { type: 'approve' as const }
+        : { type: 'reject' as const, message: '用户拒绝了这次工具调用，请不要重试，向用户说明后续方案。' }
+    )
+
+    setPendingApproval(undefined)
+    setError('')
+    setLoading(true)
+    try {
+      await sendApproval(sessionId, decisions, event => updateAssistantMessage(assistantId, event))
+    } catch (nextError) {
+      updateAssistantMessage(assistantId, {
         type: 'Error',
         message: nextError instanceof Error ? nextError.message : String(nextError)
       })
@@ -108,11 +211,11 @@ export default function ChatPage() {
       <aside className="chat-sidebar">
         <div className="brand">
           <span className="brand-mark">
-            <Sparkles size={19} />
+            <ShieldCheck size={19} />
           </span>
           <div>
-            <strong>Ark Agent</strong>
-            <span>LangChain Responses</span>
+            <strong>Deep Agent</strong>
+            <span>LangGraph runtime</span>
           </div>
         </div>
         <button className="new-chat-button" type="button" onClick={startNewSession} disabled={initializing || loading}>
@@ -123,7 +226,7 @@ export default function ChatPage() {
           <span className="sidebar-title">当前会话</span>
           <div className="conversation-item active">
             <Bot size={16} />
-            <span>Responses API 对话</span>
+            <span>Deep Agent 对话</span>
           </div>
         </div>
         <div className="sidebar-status">
@@ -139,7 +242,7 @@ export default function ChatPage() {
         <header className="chat-header">
           <div>
             <h1>AI 智能助手</h1>
-            <p>LangChain Agent · Ark Responses API · store: true</p>
+            <p>Deep Agents · MemorySaver · src/skills</p>
           </div>
           <span className="model-badge">{initializing ? '连接中' : sessionId ? '在线' : '离线'}</span>
         </header>
@@ -149,7 +252,7 @@ export default function ChatPage() {
               <div className="message-avatar">{message.role === 'assistant' ? <Bot size={18} /> : <UserRound size={17} />}</div>
               <div className="message-body">
                 <div className="message-meta">
-                  <strong>{message.role === 'assistant' ? 'Ark Agent' : '你'}</strong>
+                  <strong>{message.role === 'assistant' ? 'Deep Agent' : '你'}</strong>
                   <span>
                     {message.createdAt
                       ? new Date(message.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
@@ -170,15 +273,47 @@ export default function ChatPage() {
           ))}
         </div>
         <footer className="composer-area">
+          {pendingApproval && (
+            <section className="approval-panel" aria-live="polite">
+              <div className="approval-header">
+                <div>
+                  <ShieldCheck size={17} />
+                  <strong>需要人工审批</strong>
+                </div>
+                <span>{pendingApproval.requests.length} 个工具调用</span>
+              </div>
+              <div className="approval-list">
+                {pendingApproval.requests.map(request => (
+                  <div className="approval-item" key={request.id}>
+                    <div className="approval-item-title">
+                      <strong>{request.name}</strong>
+                      <span>{request.description || '该操作可能修改文件或执行外部命令'}</span>
+                    </div>
+                    <pre>{formatArgs(request.args)}</pre>
+                  </div>
+                ))}
+              </div>
+              <div className="approval-actions">
+                <button className="approval-reject" type="button" onClick={() => approvePending(false)} disabled={loading}>
+                  <X size={16} />
+                  拒绝
+                </button>
+                <button className="approval-approve" type="button" onClick={() => approvePending(true)} disabled={loading}>
+                  <ShieldCheck size={16} />
+                  批准并继续
+                </button>
+              </div>
+            </section>
+          )}
           {error && <div className="error-banner">{error}</div>}
           <form className="composer" onSubmit={handleSubmit}>
             <textarea
               value={input}
               onChange={event => setInput(event.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={initializing ? '正在初始化会话...' : '输入你的问题'}
+              placeholder={initializing ? '正在恢复会话...' : pendingApproval ? '请先处理待审批操作' : '输入你的问题'}
               rows={2}
-              disabled={!sessionId || initializing}
+              disabled={!sessionId || initializing || Boolean(pendingApproval)}
             />
             <div className="composer-actions">
               {loading ? (
@@ -187,14 +322,19 @@ export default function ChatPage() {
                   停止
                 </button>
               ) : (
-                <button className="send-button" type="submit" disabled={!input.trim() || !sessionId} title="发送消息">
+                <button
+                  className="send-button"
+                  type="submit"
+                  disabled={!input.trim() || !sessionId || Boolean(pendingApproval)}
+                  title="发送消息"
+                >
                   <Send size={17} />
                   发送
                 </button>
               )}
             </div>
           </form>
-          <p className="composer-hint">响应会自动保存上下文，下一轮通过 previous_response_id 延续。</p>
+          <p className="composer-hint">会话状态保存在当前服务进程内，浏览器刷新后会自动恢复。</p>
         </footer>
       </section>
     </main>

@@ -1,4 +1,4 @@
-import type { ChatStreamEvent } from '@/types/ai'
+import type { ApprovalDecision, ChatMessage, ChatStreamEvent, PendingApproval } from '@/types/ai'
 
 async function readError(response: Response) {
   const result = (await response.json().catch(() => null)) as { message?: string } | null
@@ -12,13 +12,18 @@ export async function initSession() {
   return result.sessionId
 }
 
-export async function sendMessage(sessionId: string, message: string, onEvent: (event: ChatStreamEvent) => void) {
-  const response = await fetch('/api/ai/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sessionId, message })
-  })
+export async function getSession(sessionId: string) {
+  const response = await fetch(`/api/ai/session/${encodeURIComponent(sessionId)}`, { cache: 'no-store' })
+  if (!response.ok) throw new Error(await readError(response))
+  return (await response.json()) as {
+    sessionId: string
+    createdAt: number
+    messages: ChatMessage[]
+    pendingApproval?: PendingApproval
+  }
+}
 
+async function consumeSse(response: Response, onEvent: (event: ChatStreamEvent) => void) {
   if (!response.ok) throw new Error(await readError(response))
   if (!response.body) throw new Error('服务端没有返回消息流')
 
@@ -39,6 +44,30 @@ export async function sendMessage(sessionId: string, message: string, onEvent: (
 
     if (done) break
   }
+}
+
+export async function sendMessage(sessionId: string, message: string, onEvent: (event: ChatStreamEvent) => void) {
+  const response = await fetch('/api/ai/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId, message })
+  })
+
+  await consumeSse(response, onEvent)
+}
+
+export async function sendApproval(
+  sessionId: string,
+  decisions: ApprovalDecision[],
+  onEvent: (event: ChatStreamEvent) => void
+) {
+  const response = await fetch('/api/ai/approval', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId, decisions })
+  })
+
+  await consumeSse(response, onEvent)
 }
 
 export async function stopMessage(sessionId: string) {

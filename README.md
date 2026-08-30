@@ -2,8 +2,8 @@
 
 这是将 M4 后端 `AiHandler.kt` 的 AI 对话逻辑重构为 Next.js 的个人学习项目，包含：
 
-- Ark Responses API 会话初始化和上下文串联
-- SSE 流式对话、停止生成和函数调用闭环
+- Deep Agents + LangGraph 内存会话和上下文串联
+- SSE 流式对话、工具调用和人工审批闭环
 - 火山引擎录音转文字
 - Next.js Route Handlers 后端与 React 聊天界面
 - 从 `src/skills` 按需发现和加载 Skills
@@ -38,20 +38,22 @@ npm install
 npm run dev
 ```
 
-访问 `http://localhost:3000`。
+访问 `http://localhost:8666`。
 
 ## API
 
 - `POST /api/ai/session`：初始化会话
+- `GET /api/ai/session/:sessionId`：读取内存中的会话消息和待审批动作
 - `POST /api/ai/chat`：发送消息并返回 SSE
-- `POST /api/ai/call-function`：执行函数结果后的续写
+- `POST /api/ai/approval`：提交工具调用的人工审批决定并返回 SSE
 - `POST /api/ai/stop`：停止当前生成
-- `POST /api/ai/speech-recognize`：一次性语音识别
 
 浏览器端所有通信封装在 `src/api/ai-api.ts`，没有使用 Server Actions。
 
 ## Skills
 
-每个 Skill 固定存放在 `src/skills/<skill-name>/SKILL.md`，其中 `SKILL.md` 必须包含 `name` 和 `description` frontmatter，且 `name` 与目录名一致。创建会话时只向模型提供 Skill 名称和描述；任务匹配后，模型会调用 `load-skill` 工具按需加载完整内容。
+每个 Skill 固定存放在 `src/skills/<skill-name>/SKILL.md`，其中 `SKILL.md` 必须包含 `name` 和 `description` frontmatter，且 `name` 与目录名一致。Deep Agents 创建时通过 `skills: ['/src/skills/']` 挂载技能目录，启动时只注入名称和描述；任务匹配后，模型使用内置 `read_file` 工具按需读取完整内容及其脚本、参考资料。
+
+Deep Agents 使用 LangGraph `MemorySaver` 保存线程状态。浏览器会在刷新时用本地保存的 `sessionId` 查询服务端状态；服务重启后内存会话自然失效，前端会自动创建新会话。
 
 Skill 引用的脚本和资料放在自己的目录中，并使用相对于该 Skill 目录的路径。修改或新增 Skill 后，新建会话即可使用。
