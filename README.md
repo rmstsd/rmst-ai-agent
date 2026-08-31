@@ -42,8 +42,11 @@ npm run dev
 
 ## API
 
-- `POST /api/ai/session`：初始化会话
-- `GET /api/ai/session/:sessionId`：读取内存中的会话消息和待审批动作
+- `GET /api/ai/session`：获取会话列表
+- `POST /api/ai/session`：创建会话（可传 `{ "title": "会话标题" }`）
+- `GET /api/ai/session/:sessionId`：读取会话消息和待审批动作
+- `PATCH /api/ai/session/:sessionId`：更新会话标题
+- `DELETE /api/ai/session/:sessionId`：删除会话及其 LangGraph 线程状态
 - `POST /api/ai/chat`：发送消息并返回 SSE
 - `POST /api/ai/approval`：提交工具调用的人工审批决定并返回 SSE
 - `POST /api/ai/stop`：停止当前生成
@@ -54,6 +57,6 @@ npm run dev
 
 每个 Skill 固定存放在 `src/skills/<skill-name>/SKILL.md`，其中 `SKILL.md` 必须包含 `name` 和 `description` frontmatter，且 `name` 与目录名一致。Deep Agents 创建时通过 `skills: ['/src/skills/']` 挂载技能目录，启动时只注入名称和描述；任务匹配后，模型使用内置 `read_file` 工具按需读取完整内容及其脚本、参考资料。
 
-Deep Agents 使用 LangGraph `MemorySaver` 保存线程状态。浏览器会在刷新时用本地保存的 `sessionId` 查询服务端状态；服务重启后内存会话自然失效，前端会自动创建新会话。
+会话元数据保存在 SQLite 的 `session` 表中，LangGraph 线程状态由 `SqliteSaver` 持久化到同一数据库。浏览器会在刷新时恢复本地保存的 `sessionId`，服务重启后仍可继续已有会话。
 
 Skill 引用的脚本和资料放在自己的目录中，并使用相对于该 Skill 目录的路径。修改或新增 Skill 后，新建会话即可使用。

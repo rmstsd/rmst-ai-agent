@@ -1,6 +1,16 @@
 'use client'
 
-import { getSession, initSession, sendApproval, sendMessage, stopMessage } from '@/api/ai-api'
+import {
+  deleteSession,
+  getSession,
+  initSession,
+  listSessions,
+  sendApproval,
+  sendMessage,
+  stopMessage,
+  updateSession,
+  type SessionSummary
+} from '@/api/ai-api'
 import type { ChatMessage, ChatStreamEvent, PendingApproval } from '@/types/ai'
 import { Bot, CircleStop, MessageSquarePlus, Send, ShieldCheck, UserRound, X } from 'lucide-react'
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react'
@@ -42,6 +52,7 @@ function formatArgs(args: unknown) {
 
 export default function ChatPage() {
   const [sessionId, setSessionId] = useState('')
+  const [sessionList, setSessionList] = useState<SessionSummary[]>([])
   const [messages, setMessages] = useState<ChatMessage[]>([welcomeMessage])
   const [pendingApproval, setPendingApproval] = useState<PendingApproval>()
   const [input, setInput] = useState('')
@@ -75,10 +86,7 @@ export default function ChatPage() {
 
     if (saved) {
       try {
-        const snapshot = await getSession(saved)
-        setSessionId(snapshot.sessionId)
-        setMessages(withWelcome(snapshot.messages))
-        setPendingApproval(snapshot.pendingApproval)
+        await loadSession(saved)
         setInitializing(false)
         return
       } catch {
@@ -86,7 +94,28 @@ export default function ChatPage() {
       }
     }
 
+    try {
+      const sessions = await listSessions()
+      setSessionList(sessions)
+      if (sessions[0]) {
+        await loadSession(sessions[0].id)
+        setInitializing(false)
+        return
+      }
+    } catch {
+      // 创建新会话时会再次报告错误
+    }
+
     await startNewSession()
+  }
+
+  async function loadSession(nextSessionId: string) {
+    const snapshot = await getSession(nextSessionId)
+    setSessionId(snapshot.sessionId)
+    setMessages(withWelcome(snapshot.messages))
+    setPendingApproval(snapshot.pendingApproval)
+    const sessions = await listSessions().catch(() => [])
+    setSessionList(sessions)
   }
 
   function readStoredSession() {
@@ -109,7 +138,8 @@ export default function ChatPage() {
       setSessionId(nextSessionId)
       setMessages([{ ...welcomeMessage, id: crypto.randomUUID(), createdAt: Date.now() }])
       setInput('')
-      localStorage.removeItem(sessionStorageKey)
+      const sessions = await listSessions().catch(() => [])
+      setSessionList(sessions)
     } catch (nextError) {
       setSessionId('')
       setError(nextError instanceof Error ? nextError.message : String(nextError))
@@ -155,6 +185,7 @@ export default function ChatPage() {
 
     try {
       await sendMessage(sessionId, content, event => updateAssistantMessage(assistantMessage.id, event))
+      setSessionList(await listSessions().catch(() => sessionList))
     } catch (nextError) {
       updateAssistantMessage(assistantMessage.id, {
         type: 'Error',
@@ -162,6 +193,32 @@ export default function ChatPage() {
       })
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function renameSession(target: SessionSummary) {
+    const title = window.prompt('输入新的会话标题', target.title)?.trim()
+    if (!title || title === target.title) return
+    try {
+      const updated = await updateSession(target.id, title)
+      setSessionList(current => current.map(item => (item.id === updated.id ? updated : item)))
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : String(nextError))
+    }
+  }
+
+  async function removeSession(target: SessionSummary) {
+    if (!window.confirm(`确定删除“${target.title}”吗？`)) return
+    try {
+      await deleteSession(target.id)
+      const nextList = sessionList.filter(item => item.id !== target.id)
+      setSessionList(nextList)
+      if (target.id === sessionId) {
+        if (nextList[0]) await loadSession(nextList[0].id)
+        else await startNewSession()
+      }
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : String(nextError))
     }
   }
 
@@ -179,6 +236,7 @@ export default function ChatPage() {
     setLoading(true)
     try {
       await sendApproval(sessionId, decisions, event => updateAssistantMessage(assistantId, event))
+      setSessionList(await listSessions().catch(() => sessionList))
     } catch (nextError) {
       updateAssistantMessage(assistantId, {
         type: 'Error',
@@ -223,10 +281,24 @@ export default function ChatPage() {
           新建对话
         </button>
         <div className="sidebar-section">
-          <span className="sidebar-title">当前会话</span>
-          <div className="conversation-item active">
-            <Bot size={16} />
-            <span>Deep Agent 对话</span>
+          <span className="sidebar-title">会话列表</span>
+          <div className="conversation-list">
+            {sessionList.map(session => (
+              <div className={`conversation-item ${session.id === sessionId ? 'active' : ''}`} key={session.id}>
+                <button type="button" onClick={() => loadSession(session.id)} disabled={initializing || loading}>
+                  <Bot size={16} />
+                  <span>{session.title}</span>
+                </button>
+                <div className="conversation-actions">
+                  <button type="button" onClick={() => renameSession(session)} disabled={loading} title="重命名">
+                    编辑
+                  </button>
+                  <button type="button" onClick={() => removeSession(session)} disabled={loading} title="删除">
+                    删除
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
         <div className="sidebar-status">
@@ -334,7 +406,6 @@ export default function ChatPage() {
               )}
             </div>
           </form>
-          <p className="composer-hint">会话状态保存在当前服务进程内，浏览器刷新后会自动恢复。</p>
         </footer>
       </section>
     </main>

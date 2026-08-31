@@ -1,8 +1,17 @@
 import { aiConfig } from '@/config/ai-config'
 import type { ApprovalDecision, ApprovalRequest, ChatMessage, PendingApproval } from '@/types/ai'
-import { Command, MemorySaver } from '@langchain/langgraph'
+import { Command } from '@langchain/langgraph'
 import { createDeepAgent, LocalShellBackend } from 'deepagents'
 import { createArkModel, requireArkConfig } from './ark-responses-compat'
+import {
+  checkpointer,
+  deleteSessionData,
+  getSession as getStoredSession,
+  insertSession,
+  listSessions as listStoredSessions,
+  touchSession as touchStoredSession,
+  updateSessionTitle
+} from './session-repository'
 import { systemPrompts } from './system-prompts'
 import { writeFile } from 'node:fs/promises'
 import { tool } from 'langchain'
@@ -11,8 +20,6 @@ import z from 'zod'
 interface AgentSession {
   id: string
   createdAt: number
-  controller?: AbortController
-  pendingApproval?: PendingApproval
 }
 
 export type AgentStreamEvent =
@@ -21,8 +28,8 @@ export type AgentStreamEvent =
   | { type: 'Approval'; approval: PendingApproval }
   | { type: 'Done'; interrupted?: boolean; responseId?: string }
 
-const sessions = new Map<string, AgentSession>()
-const checkpointer = new MemorySaver()
+const sessionControllers = new Map<string, AbortController>()
+
 let agentPromise: Promise<ReturnType<typeof createDeepAgent>> | undefined
 const model = createArkModel()
 
@@ -74,26 +81,54 @@ function newId() {
   return crypto.randomUUID().replaceAll('-', '')
 }
 
-export function createSession() {
+export function listSessions() {
+  return listStoredSessions()
+}
+
+export function getSession(sessionId: string) {
+  return getStoredSession(sessionId)
+}
+
+export function createSession(title = '新建对话') {
   requireArkConfig()
-  const session: AgentSession = {
-    id: newId(),
-    createdAt: Date.now()
-  }
-  sessions.set(session.id, session)
-  return session.id
+  const id = newId()
+  const now = Date.now()
+  const normalizedTitle = title.trim().slice(0, 120) || '新建对话'
+  insertSession(id, normalizedTitle, now)
+  return id
 }
 
 function requireSession(sessionId: string) {
-  const session = sessions.get(sessionId)
-  if (!session) throw new Error('会话不存在或已过期，请新建对话')
-  return session
+  const stored = getSession(sessionId)
+  if (!stored) throw new Error('会话不存在或已过期，请新建对话')
+  return { id: stored.id, createdAt: stored.createdAt }
 }
 
 export function stopSession(sessionId: string) {
+  requireSession(sessionId)
+  sessionControllers.get(sessionId)?.abort()
+  sessionControllers.delete(sessionId)
+}
+
+export function updateSession(sessionId: string, input: { title?: string }) {
   const session = requireSession(sessionId)
-  session.controller?.abort()
-  session.controller = undefined
+  if (input.title !== undefined) {
+    const title = input.title.trim().slice(0, 120)
+    if (!title) throw new Error('会话标题不能为空')
+    updateSessionTitle(sessionId, title, Date.now())
+  }
+  return getSession(sessionId)
+}
+
+export async function deleteSession(sessionId: string) {
+  requireSession(sessionId)
+  sessionControllers.get(sessionId)?.abort()
+  sessionControllers.delete(sessionId)
+  await deleteSessionData(sessionId)
+}
+
+function touchSession(sessionId: string, title?: string) {
+  touchStoredSession(sessionId, title?.trim().slice(0, 120), Date.now())
 }
 
 function contentToText(content: unknown) {
@@ -205,20 +240,21 @@ function extractApprovalFromSnapshot(snapshot: unknown): PendingApproval | undef
 
 async function getSnapshot(sessionId: string) {
   const agent = await getAgent()
-  return (await agent.getState({ configurable: { thread_id: sessionId } })) as unknown
+  return agent.getState({ configurable: { thread_id: sessionId } }) as unknown
 }
 
 export async function getSessionSnapshot(sessionId: string) {
   const session = requireSession(sessionId)
   const snapshot = await getSnapshot(sessionId)
-  await writeFile('./debug-state.json', JSON.stringify(snapshot, null, 2), 'utf-8')
   const values = isRecord(snapshot) && isRecord(snapshot.values) ? snapshot.values : {}
   const pendingApproval = extractApprovalFromSnapshot(snapshot)
-  session.pendingApproval = pendingApproval
+  const metadata = getSession(sessionId)
 
   return {
     sessionId: session.id,
     createdAt: session.createdAt,
+    title: metadata?.title,
+    updatedAt: metadata?.updatedAt,
     messages: extractMessages(values.messages),
     pendingApproval
   }
@@ -270,7 +306,6 @@ async function streamRun(session: AgentSession, input: unknown, signal: AbortSig
 
   const snapshot = await getSnapshot(session.id)
   const pendingApproval = extractApprovalFromSnapshot(snapshot)
-  session.pendingApproval = pendingApproval
   if (pendingApproval) onEvent({ type: 'Approval', approval: pendingApproval })
   onEvent({ type: 'Done', interrupted: Boolean(pendingApproval) })
 }
@@ -283,13 +318,14 @@ async function runWithController(
 ) {
   requireArkConfig()
   const session = requireSession(sessionId)
-  session.controller?.abort()
+  touchSession(sessionId)
+  sessionControllers.get(sessionId)?.abort()
 
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), aiConfig.ark.timeoutMs)
   const abort = () => controller.abort()
   signal.addEventListener('abort', abort, { once: true })
-  session.controller = controller
+  sessionControllers.set(sessionId, controller)
 
   try {
     await streamRun(session, input, controller.signal, onEvent)
@@ -303,7 +339,7 @@ async function runWithController(
   } finally {
     clearTimeout(timeout)
     signal.removeEventListener('abort', abort)
-    if (session.controller === controller) session.controller = undefined
+    if (sessionControllers.get(sessionId) === controller) sessionControllers.delete(sessionId)
   }
 }
 
@@ -313,6 +349,8 @@ export async function streamAgentMessage(
   signal: AbortSignal,
   onEvent: (event: AgentStreamEvent) => void
 ) {
+  requireSession(sessionId)
+  touchSession(sessionId, message)
   await runWithController(sessionId, { messages: [{ role: 'user', content: message }] }, signal, onEvent)
 }
 
@@ -322,8 +360,8 @@ export async function streamAgentApproval(
   signal: AbortSignal,
   onEvent: (event: AgentStreamEvent) => void
 ) {
-  const session = requireSession(sessionId)
-  const pendingApproval = session.pendingApproval ?? (await getSessionSnapshot(sessionId)).pendingApproval
+  requireSession(sessionId)
+  const pendingApproval = (await getSessionSnapshot(sessionId)).pendingApproval
   if (!pendingApproval) throw new Error('当前会话没有等待审批的工具调用')
   if (decisions.length !== pendingApproval.requests.length) throw new Error('审批决定数量与待审批工具调用不一致')
 
