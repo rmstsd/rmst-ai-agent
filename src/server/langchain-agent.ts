@@ -154,28 +154,42 @@ function stringifyArgs(value: unknown) {
   }
 }
 
-function extractMessages(value: unknown): ChatMessage[] {
+function extractMessages(value: unknown, fallbackCreatedAt = 0): ChatMessage[] {
   if (!Array.isArray(value)) return []
 
   return value.flatMap((item, index) => {
     if (!item || typeof item !== 'object') return []
-    const message = item as {
+    const rawItem = item as {
       id?: unknown
       type?: unknown
+      kwargs?: Record<string, unknown>
       content?: unknown
       additional_kwargs?: { createdAt?: unknown }
+      response_metadata?: { created_at?: unknown }
     }
-    const role = message.type === 'human' ? 'user' : message.type === 'ai' ? 'assistant' : undefined
+    const message = rawItem.kwargs ?? rawItem
+    const constructorId = Array.isArray(rawItem.id) ? rawItem.id.at(-1) : undefined
+    const messageType = rawItem.type ?? constructorId
+    const role = messageType === 'human' || messageType === 'HumanMessage' ? 'user' : messageType === 'ai' || messageType === 'AIMessage' || messageType === 'AIMessageChunk' ? 'assistant' : undefined
     if (!role) return []
     const content = contentToText(message.content)
     if (!content) return []
-    const createdAt = message.additional_kwargs?.createdAt
+    const additionalKwargs = message.additional_kwargs as { createdAt?: unknown } | undefined
+    const responseMetadata = message.response_metadata as { created_at?: unknown } | undefined
+    const rawCreatedAt = additionalKwargs?.createdAt
+    const responseCreatedAt = responseMetadata?.created_at
+    const createdAt =
+      typeof rawCreatedAt === 'number'
+        ? rawCreatedAt
+        : typeof responseCreatedAt === 'number'
+          ? (responseCreatedAt < 10_000_000_000 ? responseCreatedAt * 1000 : responseCreatedAt)
+          : 0
     return [
       {
         id: typeof message.id === 'string' && message.id ? message.id : `restored-${index}`,
         role,
         content,
-        createdAt: typeof createdAt === 'number' ? createdAt : 0,
+        createdAt: typeof createdAt === 'number' && createdAt > 0 ? createdAt : fallbackCreatedAt,
         status: 'done'
       }
     ]
@@ -255,7 +269,7 @@ export async function getSessionSnapshot(sessionId: string) {
     createdAt: session.createdAt,
     title: metadata?.title,
     updatedAt: metadata?.updatedAt,
-    messages: extractMessages(values.messages),
+    messages: extractMessages(values.messages, session.createdAt),
     pendingApproval
   }
 }
@@ -351,7 +365,12 @@ export async function streamAgentMessage(
 ) {
   requireSession(sessionId)
   touchSession(sessionId, message)
-  await runWithController(sessionId, { messages: [{ role: 'user', content: message }] }, signal, onEvent)
+  await runWithController(
+    sessionId,
+    { messages: [{ role: 'user', content: message, additional_kwargs: { createdAt: Date.now() } }] },
+    signal,
+    onEvent
+  )
 }
 
 export async function streamAgentApproval(

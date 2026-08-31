@@ -50,6 +50,18 @@ function formatArgs(args: unknown) {
   }
 }
 
+function formatMessageDate(timestamp: number) {
+  if (!timestamp) return ''
+  return new Date(timestamp).toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })
+}
+
 export default function ChatPage() {
   const [sessionId, setSessionId] = useState('')
   const [sessionList, setSessionList] = useState<SessionSummary[]>([])
@@ -326,9 +338,7 @@ export default function ChatPage() {
                 <div className="message-meta">
                   <strong>{message.role === 'assistant' ? 'Deep Agent' : '你'}</strong>
                   <span>
-                    {message.createdAt
-                      ? new Date(message.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-                      : ''}
+                    {formatMessageDate(message.createdAt)}
                   </span>
                 </div>
                 <div className={`message-content ${message.status === 'error' ? 'error' : ''}`}>
