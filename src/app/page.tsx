@@ -168,6 +168,16 @@ export default function ChatPage() {
       current.map(message => {
         if (message.id !== id) return message
         if (event.type === 'Text') return { ...message, content: message.content + event.text }
+        if (event.type === 'Function') {
+          const args = event.args ? `\n输入：${event.args}` : ''
+          const content = `${message.content}${message.content ? '\n\n' : ''}[调用工具] ${event.name}${args}`
+          return { ...message, content }
+        }
+        if (event.type === 'FunctionResult') {
+          const output = event.output ? `\n输出：${event.output}` : '\n输出：无'
+          const content = `${message.content}${message.content ? '\n' : ''}[工具完成] ${event.name}${output}`
+          return { ...message, content }
+        }
         if (event.type === 'Error') return { ...message, content: message.content || event.message, status: 'error' }
         if (event.type === 'Done') return { ...message, status: event.interrupted ? 'streaming' : 'done' }
         return message

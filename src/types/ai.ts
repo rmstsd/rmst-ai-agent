@@ -36,4 +36,5 @@ export type ChatStreamEvent =
   | { type: 'Done'; responseId?: string; interrupted?: boolean }
   | { type: 'Error'; code?: string; message: string }
   | { type: 'Function'; name: string; args?: string; callId: string }
+  | { type: 'FunctionResult'; name: string; output?: string; callId: string }
   | { type: 'Approval'; approval: PendingApproval }

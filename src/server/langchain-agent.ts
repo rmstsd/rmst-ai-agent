@@ -25,6 +25,7 @@ interface AgentSession {
 export type AgentStreamEvent =
   | { type: 'Text'; text: string }
   | { type: 'Function'; name: string; args?: string; callId: string }
+  | { type: 'FunctionResult'; name: string; output?: string; callId: string }
   | { type: 'Approval'; approval: PendingApproval }
   | { type: 'Done'; interrupted?: boolean; responseId?: string }
 
@@ -139,10 +140,13 @@ function contentToText(content: unknown) {
     .map(part => {
       if (typeof part === 'string') return part
       if (!part || typeof part !== 'object') return ''
-      const value = part as { text?: unknown; content?: unknown }
-      return typeof value.text === 'string' ? value.text : typeof value.content === 'string' ? value.content : ''
+      const value = part as { text?: unknown; reasoning?: unknown; content?: unknown }
+      if (typeof value.text === 'string') return value.text
+      if (typeof value.reasoning === 'string') return value.reasoning
+      return typeof value.content === 'string' ? value.content : ''
     })
-    .join('')
+    .filter(Boolean)
+    .join('\n')
 }
 
 function stringifyArgs(value: unknown) {
@@ -164,15 +168,29 @@ function extractMessages(value: unknown, fallbackCreatedAt = 0): ChatMessage[] {
       type?: unknown
       kwargs?: Record<string, unknown>
       content?: unknown
+      tool_calls?: unknown
       additional_kwargs?: { createdAt?: unknown }
       response_metadata?: { created_at?: unknown }
     }
     const message = rawItem.kwargs ?? rawItem
     const constructorId = Array.isArray(rawItem.id) ? rawItem.id.at(-1) : undefined
     const messageType = rawItem.type ?? constructorId
-    const role = messageType === 'human' || messageType === 'HumanMessage' ? 'user' : messageType === 'ai' || messageType === 'AIMessage' || messageType === 'AIMessageChunk' ? 'assistant' : undefined
+    const isToolMessage = messageType === 'tool' || messageType === 'ToolMessage'
+    const role = messageType === 'human' || messageType === 'HumanMessage' ? 'user' : messageType === 'ai' || messageType === 'AIMessage' || messageType === 'AIMessageChunk' || isToolMessage ? 'assistant' : undefined
     if (!role) return []
-    const content = contentToText(message.content)
+    let content = contentToText(message.content)
+    if (!content && Array.isArray(message.tool_calls)) {
+      content = message.tool_calls
+        .map(call => {
+          if (!call || typeof call !== 'object') return ''
+          const toolCall = call as { name?: unknown; args?: unknown }
+          const args = stringifyArgs(toolCall.args)
+          return `[调用工具] ${typeof toolCall.name === 'string' ? toolCall.name : 'tool'}${args ? `\n输入：${args}` : ''}`
+        })
+        .filter(Boolean)
+        .join('\n\n')
+    }
+    if (isToolMessage && content) content = `[工具输出] ${content}`
     if (!content) return []
     const additionalKwargs = message.additional_kwargs as { createdAt?: unknown } | undefined
     const responseMetadata = message.response_metadata as { created_at?: unknown } | undefined
@@ -277,6 +295,7 @@ export async function getSessionSnapshot(sessionId: string) {
 interface RawStreamEvent {
   event?: string
   name?: string
+  run_id?: string
   data?: {
     chunk?: unknown
     input?: unknown
@@ -308,13 +327,19 @@ async function streamRun(session: AgentSession, input: unknown, signal: AbortSig
     if (event.event === 'on_tool_start') {
       const inputValue = event.data?.input
       const callId =
-        isRecord(inputValue) && typeof inputValue.tool_call_id === 'string'
+        event.run_id ??
+        (isRecord(inputValue) && typeof inputValue.tool_call_id === 'string'
           ? inputValue.tool_call_id
-          : `${event.name ?? 'tool'}-${Date.now()}`
+          : `${event.name ?? 'tool'}-${Date.now()}`)
       if (!emittedToolCalls.has(callId)) {
         emittedToolCalls.add(callId)
         onEvent({ type: 'Function', name: event.name ?? 'tool', args: stringifyArgs(inputValue), callId })
       }
+    }
+
+    if (event.event === 'on_tool_end') {
+      const callId = event.run_id ?? `${event.name ?? 'tool'}-${Date.now()}`
+      onEvent({ type: 'FunctionResult', name: event.name ?? 'tool', output: stringifyArgs(event.data?.output), callId })
     }
   }
 
