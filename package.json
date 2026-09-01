@@ -10,8 +10,6 @@
   "dependencies": {
     "@langchain/core": "^1.2.9",
     "@langchain/langgraph": "^1.4.13",
-    "@langchain/langgraph-checkpoint": "^1.1.5",
-    "@langchain/langgraph-checkpoint-sqlite": "^1.0.4",
     "@langchain/openai": "^1.5.10",
     "@tailwindcss/postcss": "^4.1.11",
     "deepagents": "^1.13.2",

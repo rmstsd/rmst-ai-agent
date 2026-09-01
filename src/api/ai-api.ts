@@ -1,61 +1,21 @@
-import type { ApprovalDecision, ChatMessage, ChatStreamEvent, PendingApproval } from '@/types/ai'
-
-export interface SessionSummary {
-  id: string
-  threadId: string
-  title: string
-  createdAt: number
-  updatedAt: number
-}
+import type { ApprovalDecision, ChatStreamEvent, LangChainHistoryMessage, PendingApproval } from '@/types/ai'
 
 async function readError(response: Response) {
   const result = (await response.json().catch(() => null)) as { message?: string } | null
   return result?.message ?? `请求失败（${response.status}）`
 }
 
-export async function listSessions() {
-  const response = await fetch('/api/ai/session', { cache: 'no-store' })
-  if (!response.ok) throw new Error(await readError(response))
-  return ((await response.json()) as { sessions: SessionSummary[] }).sessions
-}
-
-export async function initSession(title?: string) {
-  const response = await fetch('/api/ai/session', {
+export async function getConversationHistory(sessionId: string) {
+  const response = await fetch('/api/ai/history', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(title ? { title } : {})
+    body: JSON.stringify({ sessionId })
   })
-  if (!response.ok) throw new Error(await readError(response))
-  const result = (await response.json()) as { sessionId: string }
-  return result.sessionId
-}
-
-export async function getSession(sessionId: string) {
-  const response = await fetch(`/api/ai/session/${encodeURIComponent(sessionId)}`, { cache: 'no-store' })
   if (!response.ok) throw new Error(await readError(response))
   return (await response.json()) as {
-    sessionId: string
-    createdAt: number
-    title?: string
-    updatedAt?: number
-    messages: ChatMessage[]
+    messages: LangChainHistoryMessage[]
     pendingApproval?: PendingApproval
   }
-}
-
-export async function updateSession(sessionId: string, title: string) {
-  const response = await fetch(`/api/ai/session/${encodeURIComponent(sessionId)}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title })
-  })
-  if (!response.ok) throw new Error(await readError(response))
-  return ((await response.json()) as { session: SessionSummary }).session
-}
-
-export async function deleteSession(sessionId: string) {
-  const response = await fetch(`/api/ai/session/${encodeURIComponent(sessionId)}`, { method: 'DELETE' })
-  if (!response.ok) throw new Error(await readError(response))
 }
 
 async function consumeSse(response: Response, onEvent: (event: ChatStreamEvent) => void) {

@@ -1,35 +1,25 @@
 import { aiConfig } from '@/config/ai-config'
-import type { ApprovalDecision, ApprovalRequest, ChatMessage, PendingApproval } from '@/types/ai'
-import { Command } from '@langchain/langgraph'
+import type { ApprovalDecision, ApprovalRequest, LangChainHistoryMessage, PendingApproval } from '@/types/ai'
+import { Command, MemorySaver } from '@langchain/langgraph'
+import { stampRetryable } from '@langchain/core/errors'
 import { createDeepAgent, LocalShellBackend } from 'deepagents'
 import { createArkModel, requireArkConfig } from './ark-responses-compat'
-import {
-  checkpointer,
-  deleteSessionData,
-  getSession as getStoredSession,
-  insertSession,
-  listSessions as listStoredSessions,
-  touchSession as touchStoredSession,
-  updateSessionTitle
-} from './session-repository'
 import { systemPrompts } from './system-prompts'
-import { writeFile } from 'node:fs/promises'
-import { tool } from 'langchain'
+import { coerceMessageLikeToMessage, mapStoredMessageToChatMessage } from '@langchain/core/messages'
+import type { StreamEvent } from '@langchain/core/tracers/log_stream'
+import { AIMessageChunk, tool, toolRetryMiddleware, toolErrorMiddleware } from 'langchain'
 import z from 'zod'
-
-interface AgentSession {
-  id: string
-  createdAt: number
-}
 
 export type AgentStreamEvent =
   | { type: 'Text'; text: string }
+  | { type: 'Reasoning'; text: string }
   | { type: 'Function'; name: string; args?: string; callId: string }
   | { type: 'FunctionResult'; name: string; output?: string; callId: string }
   | { type: 'Approval'; approval: PendingApproval }
   | { type: 'Done'; interrupted?: boolean; responseId?: string }
 
 const sessionControllers = new Map<string, AbortController>()
+const checkpointer = new MemorySaver()
 
 let agentPromise: Promise<ReturnType<typeof createDeepAgent>> | undefined
 const model = createArkModel()
@@ -46,6 +36,15 @@ async function getAgent() {
 
       const getWeather = tool(
         async ({ location }) => {
+          const random = Math.random()
+
+          // if (location === '沈阳') {
+          //   throw stampRetryable(new Error('不支持 沈阳'), false)
+          // }
+
+          // if (random > 0.5) {
+          //   throw stampRetryable(new Error('Malformed record identifier'), false)
+          // }
           return `${location}温度是30摄氏度`
         },
         {
@@ -63,6 +62,17 @@ async function getAgent() {
         tools: [getWeather],
         skills: ['/src/skills/'],
         systemPrompt: systemPrompts.join('\n'),
+        middleware: [
+          toolRetryMiddleware({
+            maxRetries: 2,
+            backoffFactor: 2.0,
+            initialDelayMs: 1000
+          }),
+          toolErrorMiddleware({
+            onError: (error, request) =>
+              `调用工具 '${request.toolCall.name}' 失败: ${error instanceof Error ? error.message : String(error)}。请检查后重试。`
+          })
+        ],
         checkpointer,
         interruptOn: {
           write_file: true,
@@ -78,75 +88,55 @@ async function getAgent() {
   return agentPromise
 }
 
-function newId() {
-  return crypto.randomUUID().replaceAll('-', '')
-}
-
-export function listSessions() {
-  return listStoredSessions()
-}
-
-export function getSession(sessionId: string) {
-  return getStoredSession(sessionId)
-}
-
-export function createSession(title = '新建对话') {
-  requireArkConfig()
-  const id = newId()
-  const now = Date.now()
-  const normalizedTitle = title.trim().slice(0, 120) || '新建对话'
-  insertSession(id, normalizedTitle, now)
-  return id
-}
-
-function requireSession(sessionId: string) {
-  const stored = getSession(sessionId)
-  if (!stored) throw new Error('会话不存在或已过期，请新建对话')
-  return { id: stored.id, createdAt: stored.createdAt }
-}
-
 export function stopSession(sessionId: string) {
-  requireSession(sessionId)
   sessionControllers.get(sessionId)?.abort()
   sessionControllers.delete(sessionId)
 }
 
-export function updateSession(sessionId: string, input: { title?: string }) {
-  const session = requireSession(sessionId)
-  if (input.title !== undefined) {
-    const title = input.title.trim().slice(0, 120)
-    if (!title) throw new Error('会话标题不能为空')
-    updateSessionTitle(sessionId, title, Date.now())
+interface ContentParts {
+  text: string
+  reasoning: string
+}
+
+function contentToParts(content: unknown): ContentParts {
+  const parts: ContentParts = { text: '', reasoning: '' }
+  const items = Array.isArray(content) ? content : [content]
+
+  for (const item of items) {
+    if (typeof item === 'string') {
+      parts.text += item
+      continue
+    }
+    if (!item || typeof item !== 'object') continue
+
+    const value = item as {
+      type?: unknown
+      text?: unknown
+      reasoning?: unknown
+      reasoning_content?: unknown
+      content?: unknown
+      summary?: unknown
+    }
+    const type = typeof value.type === 'string' ? value.type.toLowerCase() : ''
+    const isReasoning = ['analysis', 'reasoning', 'reasoning_content', 'thinking', 'thought'].includes(type)
+    const reasoning =
+      typeof value.reasoning === 'string'
+        ? value.reasoning
+        : typeof value.reasoning_content === 'string'
+          ? value.reasoning_content
+          : isReasoning && Array.isArray(value.summary)
+            ? contentToParts(value.summary).text
+            : ''
+    const text = typeof value.text === 'string' ? value.text : typeof value.content === 'string' ? value.content : ''
+
+    if (reasoning) parts.reasoning += reasoning
+    if (text) {
+      if (isReasoning) parts.reasoning += text
+      else parts.text += text
+    }
   }
-  return getSession(sessionId)
-}
 
-export async function deleteSession(sessionId: string) {
-  requireSession(sessionId)
-  sessionControllers.get(sessionId)?.abort()
-  sessionControllers.delete(sessionId)
-  await deleteSessionData(sessionId)
-}
-
-function touchSession(sessionId: string, title?: string) {
-  touchStoredSession(sessionId, title?.trim().slice(0, 120), Date.now())
-}
-
-function contentToText(content: unknown) {
-  if (typeof content === 'string') return content
-  if (!Array.isArray(content)) return ''
-
-  return content
-    .map(part => {
-      if (typeof part === 'string') return part
-      if (!part || typeof part !== 'object') return ''
-      const value = part as { text?: unknown; reasoning?: unknown; content?: unknown }
-      if (typeof value.text === 'string') return value.text
-      if (typeof value.reasoning === 'string') return value.reasoning
-      return typeof value.content === 'string' ? value.content : ''
-    })
-    .filter(Boolean)
-    .join('\n')
+  return parts
 }
 
 function stringifyArgs(value: unknown) {
@@ -158,59 +148,23 @@ function stringifyArgs(value: unknown) {
   }
 }
 
-function extractMessages(value: unknown, fallbackCreatedAt = 0): ChatMessage[] {
-  if (!Array.isArray(value)) return []
+function toStoredMessage(value: unknown): LangChainHistoryMessage | undefined {
+  try {
+    const message =
+      isRecord(value) && isRecord(value.data) && typeof value.type === 'string'
+        ? mapStoredMessageToChatMessage(value as never)
+        : coerceMessageLikeToMessage(value as never)
+    return message.toDict() as unknown as LangChainHistoryMessage
+  } catch {
+    return undefined
+  }
+}
 
-  return value.flatMap((item, index) => {
-    if (!item || typeof item !== 'object') return []
-    const rawItem = item as {
-      id?: unknown
-      type?: unknown
-      kwargs?: Record<string, unknown>
-      content?: unknown
-      tool_calls?: unknown
-      additional_kwargs?: { createdAt?: unknown }
-      response_metadata?: { created_at?: unknown }
-    }
-    const message = rawItem.kwargs ?? rawItem
-    const constructorId = Array.isArray(rawItem.id) ? rawItem.id.at(-1) : undefined
-    const messageType = rawItem.type ?? constructorId
-    const isToolMessage = messageType === 'tool' || messageType === 'ToolMessage'
-    const role = messageType === 'human' || messageType === 'HumanMessage' ? 'user' : messageType === 'ai' || messageType === 'AIMessage' || messageType === 'AIMessageChunk' || isToolMessage ? 'assistant' : undefined
-    if (!role) return []
-    let content = contentToText(message.content)
-    if (!content && Array.isArray(message.tool_calls)) {
-      content = message.tool_calls
-        .map(call => {
-          if (!call || typeof call !== 'object') return ''
-          const toolCall = call as { name?: unknown; args?: unknown }
-          const args = stringifyArgs(toolCall.args)
-          return `[调用工具] ${typeof toolCall.name === 'string' ? toolCall.name : 'tool'}${args ? `\n输入：${args}` : ''}`
-        })
-        .filter(Boolean)
-        .join('\n\n')
-    }
-    if (isToolMessage && content) content = `[工具输出] ${content}`
-    if (!content) return []
-    const additionalKwargs = message.additional_kwargs as { createdAt?: unknown } | undefined
-    const responseMetadata = message.response_metadata as { created_at?: unknown } | undefined
-    const rawCreatedAt = additionalKwargs?.createdAt
-    const responseCreatedAt = responseMetadata?.created_at
-    const createdAt =
-      typeof rawCreatedAt === 'number'
-        ? rawCreatedAt
-        : typeof responseCreatedAt === 'number'
-          ? (responseCreatedAt < 10_000_000_000 ? responseCreatedAt * 1000 : responseCreatedAt)
-          : 0
-    return [
-      {
-        id: typeof message.id === 'string' && message.id ? message.id : `restored-${index}`,
-        role,
-        content,
-        createdAt: typeof createdAt === 'number' && createdAt > 0 ? createdAt : fallbackCreatedAt,
-        status: 'done'
-      }
-    ]
+function toStoredMessages(value: unknown): LangChainHistoryMessage[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap(item => {
+    const message = toStoredMessage(item)
+    return message ? [message] : []
   })
 }
 
@@ -275,31 +229,18 @@ async function getSnapshot(sessionId: string) {
   return agent.getState({ configurable: { thread_id: sessionId } }) as unknown
 }
 
-export async function getSessionSnapshot(sessionId: string) {
-  const session = requireSession(sessionId)
+async function getPendingApproval(sessionId: string) {
   const snapshot = await getSnapshot(sessionId)
-  const values = isRecord(snapshot) && isRecord(snapshot.values) ? snapshot.values : {}
-  const pendingApproval = extractApprovalFromSnapshot(snapshot)
-  const metadata = getSession(sessionId)
-
-  return {
-    sessionId: session.id,
-    createdAt: session.createdAt,
-    title: metadata?.title,
-    updatedAt: metadata?.updatedAt,
-    messages: extractMessages(values.messages, session.createdAt),
-    pendingApproval
-  }
+  return extractApprovalFromSnapshot(snapshot)
 }
 
-interface RawStreamEvent {
-  event?: string
-  name?: string
-  run_id?: string
-  data?: {
-    chunk?: unknown
-    input?: unknown
-    output?: unknown
+export async function getConversationHistory(sessionId: string) {
+  const snapshot = await getSnapshot(sessionId)
+  const values = isRecord(snapshot) && isRecord(snapshot.values) ? snapshot.values : {}
+
+  return {
+    messages: toStoredMessages(values.messages),
+    pendingApproval: extractApprovalFromSnapshot(snapshot)
   }
 }
 
@@ -307,21 +248,28 @@ function isAbortError(error: unknown) {
   return error instanceof Error && error.name === 'AbortError'
 }
 
-async function streamRun(session: AgentSession, input: unknown, signal: AbortSignal, onEvent: (event: AgentStreamEvent) => void) {
+async function streamRun(sessionId: string, input: unknown, signal: AbortSignal, onEvent: (event: AgentStreamEvent) => void) {
   const agent = await getAgent()
   const config = {
     version: 'v2' as const,
     signal,
-    configurable: { thread_id: session.id }
+    configurable: { thread_id: sessionId }
   }
   const stream = await agent.streamEvents(input as never, config as never)
   const emittedToolCalls = new Set<string>()
 
-  for await (const event of stream as AsyncIterable<RawStreamEvent>) {
+  for await (const event of stream as AsyncIterable<StreamEvent>) {
     if (event.event === 'on_chat_model_stream') {
-      const chunk = event.data?.chunk as { content?: unknown } | undefined
-      const text = contentToText(chunk?.content)
-      if (text) onEvent({ type: 'Text', text })
+      const chunk = event.data?.chunk
+      if (!AIMessageChunk.isInstance(chunk)) continue
+      const parts = contentToParts(chunk?.content)
+      const additionalKwargs = chunk.additional_kwargs
+      const reasoning =
+        parts.reasoning ||
+        (typeof additionalKwargs?.reasoning_content === 'string' ? additionalKwargs.reasoning_content : '') ||
+        (typeof additionalKwargs?.reasoning === 'string' ? additionalKwargs.reasoning : '')
+      if (reasoning) onEvent({ type: 'Reasoning', text: reasoning })
+      if (parts.text) onEvent({ type: 'Text', text: parts.text })
     }
 
     if (event.event === 'on_tool_start') {
@@ -343,7 +291,7 @@ async function streamRun(session: AgentSession, input: unknown, signal: AbortSig
     }
   }
 
-  const snapshot = await getSnapshot(session.id)
+  const snapshot = await getSnapshot(sessionId)
   const pendingApproval = extractApprovalFromSnapshot(snapshot)
   if (pendingApproval) onEvent({ type: 'Approval', approval: pendingApproval })
   onEvent({ type: 'Done', interrupted: Boolean(pendingApproval) })
@@ -356,8 +304,6 @@ async function runWithController(
   onEvent: (event: AgentStreamEvent) => void
 ) {
   requireArkConfig()
-  const session = requireSession(sessionId)
-  touchSession(sessionId)
   sessionControllers.get(sessionId)?.abort()
 
   const controller = new AbortController()
@@ -367,7 +313,7 @@ async function runWithController(
   sessionControllers.set(sessionId, controller)
 
   try {
-    await streamRun(session, input, controller.signal, onEvent)
+    await streamRun(sessionId, input, controller.signal, onEvent)
   } catch (error) {
     if (isAbortError(error)) {
       console.warn('[AI Agent] 生成已取消', { sessionId })
@@ -388,8 +334,6 @@ export async function streamAgentMessage(
   signal: AbortSignal,
   onEvent: (event: AgentStreamEvent) => void
 ) {
-  requireSession(sessionId)
-  touchSession(sessionId, message)
   await runWithController(
     sessionId,
     { messages: [{ role: 'user', content: message, additional_kwargs: { createdAt: Date.now() } }] },
@@ -404,8 +348,7 @@ export async function streamAgentApproval(
   signal: AbortSignal,
   onEvent: (event: AgentStreamEvent) => void
 ) {
-  requireSession(sessionId)
-  const pendingApproval = (await getSessionSnapshot(sessionId)).pendingApproval
+  const pendingApproval = await getPendingApproval(sessionId)
   if (!pendingApproval) throw new Error('当前会话没有等待审批的工具调用')
   if (decisions.length !== pendingApproval.requests.length) throw new Error('审批决定数量与待审批工具调用不一致')
 

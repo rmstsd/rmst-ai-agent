@@ -1,18 +1,8 @@
 'use client'
 
-import {
-  deleteSession,
-  getSession,
-  initSession,
-  listSessions,
-  sendApproval,
-  sendMessage,
-  stopMessage,
-  updateSession,
-  type SessionSummary
-} from '@/api/ai-api'
-import type { ChatMessage, ChatStreamEvent, PendingApproval } from '@/types/ai'
-import { Bot, CircleStop, MessageSquarePlus, Send, ShieldCheck, UserRound, X } from 'lucide-react'
+import { getConversationHistory, sendApproval, sendMessage, stopMessage } from '@/api/ai-api'
+import type { ChatMessage, ChatStreamEvent, ChatToolCall, LangChainHistoryMessage, PendingApproval } from '@/types/ai'
+import { Bot, CircleStop, Send, ShieldCheck, UserRound, X } from 'lucide-react'
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react'
 import './chat-page.scss'
 
@@ -38,7 +28,115 @@ function createMessage(role: ChatMessage['role'], content: string): ChatMessage 
 
 function withWelcome(messages: ChatMessage[]) {
   if (messages.some(message => message.id === welcomeMessage.id || message.content === welcomeMessage.content)) return messages
-  return [{ ...welcomeMessage, id: crypto.randomUUID(), createdAt: Date.now() }, ...messages]
+  return [welcomeMessage, ...messages]
+}
+
+function appendDelta(current: string, next: string) {
+  if (!current) return next
+  if (!next || next.startsWith(current)) return next || current
+  const maxOverlap = Math.min(current.length, next.length)
+  for (let size = maxOverlap; size > 0; size -= 1) {
+    if (current.endsWith(next.slice(0, size))) return current + next.slice(size)
+  }
+  return current + next
+}
+
+function contentToParts(content: unknown) {
+  const parts = { text: '', reasoning: '' }
+  const items = Array.isArray(content) ? content : [content]
+  for (const item of items) {
+    if (typeof item === 'string') {
+      parts.text += item
+      continue
+    }
+    if (!item || typeof item !== 'object') continue
+    const value = item as { type?: unknown; text?: unknown; reasoning?: unknown; reasoning_content?: unknown }
+    const type = typeof value.type === 'string' ? value.type.toLowerCase() : ''
+    const reasoning = typeof value.reasoning === 'string' ? value.reasoning : typeof value.reasoning_content === 'string' ? value.reasoning_content : ''
+    const text = typeof value.text === 'string' ? value.text : ''
+    if (reasoning || type === 'reasoning' || type === 'analysis') parts.reasoning = appendDelta(parts.reasoning, reasoning || text)
+    else parts.text += text
+  }
+  return parts
+}
+
+function stringify(value: unknown) {
+  if (value === undefined) return undefined
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return String(value)
+  }
+}
+
+function reasoningToText(value: unknown) {
+  if (typeof value === 'string') return value
+  if (!value || typeof value !== 'object') return ''
+  const summary = (value as { summary?: unknown }).summary
+  if (!Array.isArray(summary)) return ''
+  return summary
+    .map(item => (item && typeof item === 'object' && typeof (item as { text?: unknown }).text === 'string' ? (item as { text: string }).text : ''))
+    .filter(Boolean)
+    .join('\n')
+}
+
+function historyToMessages(history: LangChainHistoryMessage[]): ChatMessage[] {
+  const messages: ChatMessage[] = []
+  for (const [index, stored] of history.entries()) {
+    const data = stored.data
+    const parts = contentToParts(data.content)
+    const additional = data.additional_kwargs as Record<string, unknown> | undefined
+    const metadata = data.response_metadata as Record<string, unknown> | undefined
+    const responseCreatedAt = metadata?.created_at
+    const createdAt =
+      typeof additional?.createdAt === 'number'
+        ? additional.createdAt
+        : typeof responseCreatedAt === 'number'
+          ? responseCreatedAt < 10_000_000_000
+            ? responseCreatedAt * 1000
+            : responseCreatedAt
+          : Date.now()
+    const id = typeof data.id === 'string' ? data.id : `history-${index}`
+
+    if (stored.type === 'human') {
+      messages.push({ id, role: 'user', content: parts.text || parts.reasoning, createdAt, status: 'done' })
+      continue
+    }
+
+    if (stored.type === 'ai') {
+      const toolCalls = Array.isArray(data.tool_calls)
+        ? data.tool_calls.flatMap(call => {
+            if (!call || typeof call !== 'object') return []
+            const value = call as { id?: unknown; name?: unknown; args?: unknown }
+            if (typeof value.name !== 'string') return []
+            return [{ id: typeof value.id === 'string' ? value.id : `${value.name}-${index}`, name: value.name, args: stringify(value.args) }]
+          })
+        : []
+      const reasoning = parts.reasoning || reasoningToText(additional?.reasoning) || reasoningToText(additional?.reasoning_content)
+      messages.push({ id, role: 'assistant', content: parts.text, reasoning: reasoning || undefined, toolCalls, createdAt, status: 'done' })
+      continue
+    }
+
+    if (stored.type === 'tool') {
+      const assistant = messages.at(-1)
+      const toolCallId = typeof data.tool_call_id === 'string' ? data.tool_call_id : `tool-output-${index}`
+      const call = assistant?.role === 'assistant' ? assistant.toolCalls?.find(item => item.id === toolCallId) : undefined
+      if (call) call.output = parts.text || parts.reasoning || stringify(data.content) || '无'
+      else if (assistant?.role === 'assistant') assistant.toolCalls = [...(assistant.toolCalls ?? []), { id: toolCallId, name: typeof data.name === 'string' ? data.name : 'tool', output: parts.text || parts.reasoning || '无' }]
+    }
+  }
+  return messages
+}
+
+function updateToolCall(toolCalls: ChatToolCall[] | undefined, callId: string, update: Partial<ChatToolCall>) {
+  const nextToolCalls = [...(toolCalls ?? [])]
+  const index = nextToolCalls.findIndex(call => call.id === callId)
+  if (index === -1) {
+    nextToolCalls.push({ id: callId, name: update.name ?? 'tool', ...update })
+    return nextToolCalls
+  }
+  nextToolCalls[index] = { ...nextToolCalls[index], ...update }
+  return nextToolCalls
 }
 
 function formatArgs(args: unknown) {
@@ -64,7 +162,6 @@ function formatMessageDate(timestamp: number) {
 
 export default function ChatPage() {
   const [sessionId, setSessionId] = useState('')
-  const [sessionList, setSessionList] = useState<SessionSummary[]>([])
   const [messages, setMessages] = useState<ChatMessage[]>([welcomeMessage])
   const [pendingApproval, setPendingApproval] = useState<PendingApproval>()
   const [input, setInput] = useState('')
@@ -78,7 +175,7 @@ export default function ChatPage() {
   useEffect(() => {
     if (initializedRef.current) return
     initializedRef.current = true
-    restoreSession()
+    initializeSession()
   }, [])
 
   useEffect(() => {
@@ -86,74 +183,24 @@ export default function ChatPage() {
     if (element) element.scrollTop = element.scrollHeight
   }, [messages])
 
-  useEffect(() => {
-    if (!sessionId || initializing) return
-    localStorage.setItem(sessionStorageKey, sessionId)
-  }, [initializing, sessionId])
-
-  async function restoreSession() {
+  async function initializeSession() {
     setInitializing(true)
     setError('')
-    const saved = readStoredSession()
-
-    if (saved) {
-      try {
-        await loadSession(saved)
-        setInitializing(false)
-        return
-      } catch {
-        localStorage.removeItem(sessionStorageKey)
-      }
-    }
-
-    try {
-      const sessions = await listSessions()
-      setSessionList(sessions)
-      if (sessions[0]) {
-        await loadSession(sessions[0].id)
-        setInitializing(false)
-        return
-      }
-    } catch {
-      // 创建新会话时会再次报告错误
-    }
-
-    await startNewSession()
-  }
-
-  async function loadSession(nextSessionId: string) {
-    const snapshot = await getSession(nextSessionId)
-    setSessionId(snapshot.sessionId)
-    setMessages(withWelcome(snapshot.messages))
-    setPendingApproval(snapshot.pendingApproval)
-    const sessions = await listSessions().catch(() => [])
-    setSessionList(sessions)
-  }
-
-  function readStoredSession() {
+    let nextSessionId = crypto.randomUUID()
     try {
       const raw = localStorage.getItem(sessionStorageKey)
-      if (!raw) return undefined
-      return raw
+      nextSessionId = raw || nextSessionId
+      if (!raw) localStorage.setItem(sessionStorageKey, nextSessionId)
     } catch {
-      return undefined
+      // localStorage 不可用时仍使用本次页面生成的会话 ID。
     }
-  }
 
-  async function startNewSession() {
-    setInitializing(true)
-    setError('')
-    setPendingApproval(undefined)
-    assistantMessageIdRef.current = ''
+    setSessionId(nextSessionId)
     try {
-      const nextSessionId = await initSession()
-      setSessionId(nextSessionId)
-      setMessages([{ ...welcomeMessage, id: crypto.randomUUID(), createdAt: Date.now() }])
-      setInput('')
-      const sessions = await listSessions().catch(() => [])
-      setSessionList(sessions)
+      const history = await getConversationHistory(nextSessionId)
+      setMessages(withWelcome(historyToMessages(history.messages)))
+      setPendingApproval(history.pendingApproval)
     } catch (nextError) {
-      setSessionId('')
       setError(nextError instanceof Error ? nextError.message : String(nextError))
     } finally {
       setInitializing(false)
@@ -168,16 +215,17 @@ export default function ChatPage() {
       current.map(message => {
         if (message.id !== id) return message
         if (event.type === 'Text') return { ...message, content: message.content + event.text }
-        if (event.type === 'Function') {
-          const args = event.args ? `\n输入：${event.args}` : ''
-          const content = `${message.content}${message.content ? '\n\n' : ''}[调用工具] ${event.name}${args}`
-          return { ...message, content }
-        }
-        if (event.type === 'FunctionResult') {
-          const output = event.output ? `\n输出：${event.output}` : '\n输出：无'
-          const content = `${message.content}${message.content ? '\n' : ''}[工具完成] ${event.name}${output}`
-          return { ...message, content }
-        }
+        if (event.type === 'Reasoning') return { ...message, reasoning: appendDelta(message.reasoning ?? '', event.text) }
+        if (event.type === 'Function')
+          return {
+            ...message,
+            toolCalls: updateToolCall(message.toolCalls, event.callId, { name: event.name, args: event.args })
+          }
+        if (event.type === 'FunctionResult')
+          return {
+            ...message,
+            toolCalls: updateToolCall(message.toolCalls, event.callId, { name: event.name, output: event.output ?? '无' })
+          }
         if (event.type === 'Error') return { ...message, content: message.content || event.message, status: 'error' }
         if (event.type === 'Done') return { ...message, status: event.interrupted ? 'streaming' : 'done' }
         return message
@@ -207,7 +255,6 @@ export default function ChatPage() {
 
     try {
       await sendMessage(sessionId, content, event => updateAssistantMessage(assistantMessage.id, event))
-      setSessionList(await listSessions().catch(() => sessionList))
     } catch (nextError) {
       updateAssistantMessage(assistantMessage.id, {
         type: 'Error',
@@ -215,32 +262,6 @@ export default function ChatPage() {
       })
     } finally {
       setLoading(false)
-    }
-  }
-
-  async function renameSession(target: SessionSummary) {
-    const title = window.prompt('输入新的会话标题', target.title)?.trim()
-    if (!title || title === target.title) return
-    try {
-      const updated = await updateSession(target.id, title)
-      setSessionList(current => current.map(item => (item.id === updated.id ? updated : item)))
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : String(nextError))
-    }
-  }
-
-  async function removeSession(target: SessionSummary) {
-    if (!window.confirm(`确定删除“${target.title}”吗？`)) return
-    try {
-      await deleteSession(target.id)
-      const nextList = sessionList.filter(item => item.id !== target.id)
-      setSessionList(nextList)
-      if (target.id === sessionId) {
-        if (nextList[0]) await loadSession(nextList[0].id)
-        else await startNewSession()
-      }
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : String(nextError))
     }
   }
 
@@ -258,7 +279,6 @@ export default function ChatPage() {
     setLoading(true)
     try {
       await sendApproval(sessionId, decisions, event => updateAssistantMessage(assistantId, event))
-      setSessionList(await listSessions().catch(() => sessionList))
     } catch (nextError) {
       updateAssistantMessage(assistantId, {
         type: 'Error',
@@ -288,7 +308,7 @@ export default function ChatPage() {
 
   return (
     <main className="chat-page">
-      <aside className="chat-sidebar">
+      <aside className="chat-sidebar" hidden>
         <div className="brand">
           <span className="brand-mark">
             <ShieldCheck size={19} />
@@ -296,31 +316,6 @@ export default function ChatPage() {
           <div>
             <strong>Deep Agent</strong>
             <span>LangGraph runtime</span>
-          </div>
-        </div>
-        <button className="new-chat-button" type="button" onClick={startNewSession} disabled={initializing || loading}>
-          <MessageSquarePlus size={17} />
-          新建对话
-        </button>
-        <div className="sidebar-section">
-          <span className="sidebar-title">会话列表</span>
-          <div className="conversation-list">
-            {sessionList.map(session => (
-              <div className={`conversation-item ${session.id === sessionId ? 'active' : ''}`} key={session.id}>
-                <button type="button" onClick={() => loadSession(session.id)} disabled={initializing || loading}>
-                  <Bot size={16} />
-                  <span>{session.title}</span>
-                </button>
-                <div className="conversation-actions">
-                  <button type="button" onClick={() => renameSession(session)} disabled={loading} title="重命名">
-                    编辑
-                  </button>
-                  <button type="button" onClick={() => removeSession(session)} disabled={loading} title="删除">
-                    删除
-                  </button>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
         <div className="sidebar-status">
@@ -336,7 +331,14 @@ export default function ChatPage() {
         <header className="chat-header">
           <div>
             <h1>AI 智能助手</h1>
-            <p>Deep Agents · MemorySaver · src/skills</p>
+            <button
+              onClick={() => {
+                localStorage.clear()
+                location.reload()
+              }}
+            >
+              新建
+            </button>
           </div>
           <span className="model-badge">{initializing ? '连接中' : sessionId ? '在线' : '离线'}</span>
         </header>
@@ -347,19 +349,51 @@ export default function ChatPage() {
               <div className="message-body">
                 <div className="message-meta">
                   <strong>{message.role === 'assistant' ? 'Deep Agent' : '你'}</strong>
-                  <span>
-                    {formatMessageDate(message.createdAt)}
-                  </span>
+                  <span>{formatMessageDate(message.createdAt)}</span>
                 </div>
-                <div className={`message-content ${message.status === 'error' ? 'error' : ''}`}>
-                  {message.content || (
-                    <span className="typing-indicator">
-                      <i />
-                      <i />
-                      <i />
-                    </span>
-                  )}
-                </div>
+                {message.role === 'assistant' && message.reasoning && (
+                  <section className="message-reasoning">
+                    <span>思考过程</span>
+                    <div>{message.reasoning}</div>
+                  </section>
+                )}
+                {message.role === 'assistant' && message.toolCalls?.length ? (
+                  <section className="message-tools">
+                    {message.toolCalls.map(toolCall => (
+                      <article className="message-tool" key={toolCall.id}>
+                        <div className="message-tool-header">
+                          <strong>{toolCall.name}</strong>
+                          <span>{toolCall.output === undefined ? '执行中' : '已完成'}</span>
+                        </div>
+                        {toolCall.args && (
+                          <pre>
+                            <b>输入</b>
+                            {toolCall.args}
+                          </pre>
+                        )}
+                        {toolCall.output !== undefined && (
+                          <pre>
+                            <b>输出</b>
+                            {toolCall.output}
+                          </pre>
+                        )}
+                      </article>
+                    ))}
+                  </section>
+                ) : null}
+                {(message.content || !message.reasoning) && (
+                  <div
+                    className={`message-content ${message.role === 'assistant' ? 'assistant-response' : ''} ${message.status === 'error' ? 'error' : ''}`}
+                  >
+                    {message.content || (
+                      <span className="typing-indicator">
+                        <i />
+                        <i />
+                        <i />
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </article>
           ))}
@@ -403,7 +437,7 @@ export default function ChatPage() {
               value={input}
               onChange={event => setInput(event.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={initializing ? '正在恢复会话...' : pendingApproval ? '请先处理待审批操作' : '输入你的问题'}
+              placeholder={initializing ? '正在初始化会话...' : pendingApproval ? '请先处理待审批操作' : '输入你的问题'}
               rows={2}
               disabled={!sessionId || initializing || Boolean(pendingApproval)}
             />

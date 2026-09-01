@@ -1,0 +1,15 @@
+{
+  "values": {},
+  "next": [],
+  "config": {
+    "metadata": {
+      "ls_integration": "langchain_create_agent"
+    },
+    "recursionLimit": 10000,
+    "configurable": {
+      "ls_agent_type": "root",
+      "thread_id": "4253e3db-613d-43f7-a07a-823308643cb8"
+    }
+  },
+  "tasks": []
+}
