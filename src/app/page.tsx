@@ -167,15 +167,22 @@ function historyToMessages(history: LangChainHistoryMessage[]): ChatMessage[] {
 
 function updateToolCall(toolCalls: ChatToolCall[] | undefined, callId: string, update: Partial<ChatToolCall>) {
   const nextToolCalls = [...(toolCalls ?? [])]
-  let index = nextToolCalls.findIndex(call => call.id === callId)
+  let index = nextToolCalls.findIndex(call => call.id === callId && call.output === undefined)
   if (index === -1 && update.name) {
     index = nextToolCalls.findLastIndex(call => {
-      if (call.name !== update.name || (call.output !== undefined && call.status !== 'error')) return false
+      if (call.name !== update.name || call.output !== undefined) return false
       return update.args === undefined || call.args === update.args
     })
   }
   if (index === -1) {
-    nextToolCalls.push({ id: callId, name: update.name ?? 'tool', ...update })
+    const existingCall = nextToolCalls.find(call => call.id === callId)
+    const retryCount = nextToolCalls.filter(call => call.id === callId || call.id.startsWith(`${callId}-retry-`)).length
+    nextToolCalls.push({
+      ...(existingCall ?? {}),
+      id: existingCall ? `${callId}-retry-${retryCount}` : callId,
+      name: update.name ?? existingCall?.name ?? 'tool',
+      ...update
+    })
     return nextToolCalls
   }
   nextToolCalls[index] = { ...nextToolCalls[index], ...update }
