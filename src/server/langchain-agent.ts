@@ -2,12 +2,15 @@ import { aiConfig } from '@/config/ai-config'
 import type { ApprovalDecision, ApprovalRequest, LangChainHistoryMessage, PendingApproval } from '@/types/ai'
 import { Command, MemorySaver } from '@langchain/langgraph'
 import { stampRetryable } from '@langchain/core/errors'
-import { createDeepAgent, LocalShellBackend } from 'deepagents'
 import { createArkModel, requireArkConfig } from './ark-responses-compat'
 import { systemPrompts } from './system-prompts'
 import { BaseMessage, coerceMessageLikeToMessage, mapStoredMessageToChatMessage } from '@langchain/core/messages'
 import type { StreamEvent } from '@langchain/core/tracers/log_stream'
-import { AIMessageChunk, tool, toolRetryMiddleware, toolErrorMiddleware } from 'langchain'
+import { AIMessageChunk, createAgent, humanInTheLoopMiddleware, tool, toolRetryMiddleware, toolErrorMiddleware } from 'langchain'
+import { promises as fs } from 'node:fs'
+import path from 'node:path'
+import { exec } from 'node:child_process'
+import { promisify } from 'node:util'
 import z from 'zod'
 
 export type AgentStreamEvent =
@@ -21,20 +24,125 @@ export type AgentStreamEvent =
 
 const sessionControllers = new Map<string, AbortController>()
 const checkpointer = new MemorySaver()
+const execAsync = promisify(exec)
+const workspaceRoot = path.resolve(/* turbopackIgnore: true */ process.cwd())
 
-let agentPromise: Promise<ReturnType<typeof createDeepAgent>> | undefined
+type Agent = ReturnType<typeof createAgent>
+let agentPromise: Promise<Agent> | undefined
 const model = createArkModel()
+
+function resolveWorkspacePath(input: string) {
+  const resolved = path.resolve(/* turbopackIgnore: true */ workspaceRoot, input)
+  if (resolved !== workspaceRoot && !resolved.startsWith(`${workspaceRoot}${path.sep}`)) {
+    throw new Error('文件路径必须位于当前工作区内')
+  }
+  return resolved
+}
+
+async function loadSkillCatalog() {
+  const skillsRoot = path.join(workspaceRoot, 'src', 'skills')
+  const entries = await fs.readdir(skillsRoot, { withFileTypes: true }).catch(() => [])
+  const skills = await Promise.all(
+    entries
+      .filter(entry => entry.isDirectory())
+      .map(async entry => {
+        const skillPath = path.join(skillsRoot, entry.name, 'SKILL.md')
+        const source = await fs.readFile(skillPath, 'utf8').catch(() => '')
+        const frontmatter = source.match(/^---\s*([\s\S]*?)\s*---/)
+        const name = frontmatter?.[1].match(/^name:\s*(.+)$/m)?.[1]?.trim() ?? entry.name
+        const description = frontmatter?.[1].match(/^description:\s*(.+)$/m)?.[1]?.trim() ?? ''
+        return description ? `- ${name}: ${description}` : `- ${name}`
+      })
+  )
+  return skills.filter(Boolean).join('\n')
+}
+
+function createWorkspaceTools() {
+  const readFile = tool(async ({ path: filePath }) => fs.readFile(resolveWorkspacePath(filePath), 'utf8'), {
+    name: 'read_file',
+    description: '读取当前工作区内的文本文件。',
+    schema: z.object({ path: z.string().describe('相对于当前工作区的文件路径') })
+  })
+
+  const writeFile = tool(
+    async ({ path: filePath, content }) => {
+      const resolved = resolveWorkspacePath(filePath)
+      await fs.mkdir(path.dirname(resolved), { recursive: true })
+      await fs.writeFile(resolved, content, 'utf8')
+      return `已写入 ${filePath}`
+    },
+    {
+      name: 'write_file',
+      description: '写入当前工作区内的文本文件。',
+      schema: z.object({
+        path: z.string().describe('相对于当前工作区的文件路径'),
+        content: z.string().describe('要写入的完整文件内容')
+      })
+    }
+  )
+
+  const editFile = tool(
+    async ({ path: filePath, oldText, newText }) => {
+      const resolved = resolveWorkspacePath(filePath)
+      const current = await fs.readFile(resolved, 'utf8')
+      if (!current.includes(oldText)) throw new Error('文件中找不到要替换的文本')
+      await fs.writeFile(resolved, current.replace(oldText, newText), 'utf8')
+      return `已编辑 ${filePath}`
+    },
+    {
+      name: 'edit_file',
+      description: '在当前工作区内按原文片段编辑文本文件。',
+      schema: z.object({
+        path: z.string().describe('相对于当前工作区的文件路径'),
+        oldText: z.string().describe('要替换的原文片段'),
+        newText: z.string().describe('替换后的文本片段')
+      })
+    }
+  )
+
+  const deleteFile = tool(
+    async ({ path: filePath }) => {
+      await fs.rm(resolveWorkspacePath(filePath), { recursive: true, force: false })
+      return `已删除 ${filePath}`
+    },
+    {
+      name: 'delete',
+      description: '删除当前工作区内的文件或目录。',
+      schema: z.object({ path: z.string().describe('相对于当前工作区的文件或目录路径') })
+    }
+  )
+
+  const execute = tool(
+    async ({ command }) => {
+      const result = await execAsync(command, { cwd: workspaceRoot, maxBuffer: 2 * 1024 * 1024 })
+      return [result.stdout, result.stderr].filter(Boolean).join('\n') || '命令执行成功'
+    },
+    {
+      name: 'execute',
+      description: '在当前工作区执行命令。仅用于用户明确要求的操作。',
+      schema: z.object({ command: z.string().describe('要执行的 shell 命令') })
+    }
+  )
+
+  const readSkill = tool(
+    async ({ name }) => {
+      if (!/^[a-zA-Z0-9_-]+$/.test(name)) throw new Error('Skill 名称不合法')
+      return fs.readFile(path.join(workspaceRoot, 'src', 'skills', name, 'SKILL.md'), 'utf8')
+    },
+    {
+      name: 'read_skill',
+      description: '读取 src/skills 下指定 Skill 的完整说明。',
+      schema: z.object({ name: z.string().describe('Skill 目录名') })
+    }
+  )
+
+  return [readFile, writeFile, editFile, deleteFile, execute, readSkill]
+}
 
 async function getAgent() {
   requireArkConfig()
   if (!agentPromise) {
     agentPromise = (async () => {
-      const backend = await LocalShellBackend.create({
-        rootDir: process.cwd(),
-        virtualMode: true,
-        inheritEnv: true
-      })
-
       const getWeather = tool(
         async ({ location }) => {
           const random = Math.random()
@@ -57,12 +165,13 @@ async function getAgent() {
         }
       )
 
-      return createDeepAgent({
+      const skillCatalog = await loadSkillCatalog()
+      const skillPrompt = skillCatalog ? `\n可用 Skill（需要时使用 read_skill 读取完整说明）：\n${skillCatalog}` : ''
+
+      return createAgent({
         model,
-        backend,
-        tools: [getWeather],
-        skills: ['/src/skills/'],
-        systemPrompt: systemPrompts.join('\n'),
+        tools: [getWeather, ...createWorkspaceTools()],
+        systemPrompt: `${systemPrompts.join('\n')}${skillPrompt}`,
         middleware: [
           toolErrorMiddleware({
             onError: (error, request) => `调用工具 '${request.toolCall.name}' 失败: ${errorMessage(error)}。请检查后重试。`
@@ -72,17 +181,17 @@ async function getAgent() {
             backoffFactor: 2.0,
             initialDelayMs: 1000,
             onFailure: 'error'
+          }),
+          humanInTheLoopMiddleware({
+            interruptOn: {
+              write_file: true,
+              edit_file: true,
+              delete: true,
+              execute: true
+            }
           })
         ],
-        checkpointer,
-        interruptOn: {
-          write_file: true,
-          edit_file: true,
-          delete: true,
-          execute: true,
-          task: true
-          // get_weather: true
-        }
+        checkpointer
       })
     })()
   }
@@ -296,6 +405,7 @@ async function streamRun(sessionId: string, input: unknown, signal: AbortSignal,
     signal,
     configurable: { thread_id: sessionId }
   }
+  console.log(input)
   const stream = await agent.streamEvents(input as never, config as never)
   const emittedToolCalls = new Set<string>()
   let chatModelRunId = ''
@@ -416,5 +526,8 @@ export async function streamAgentApproval(
   if (!pendingApproval) throw new Error('当前会话没有等待审批的工具调用')
   if (decisions.length !== pendingApproval.requests.length) throw new Error('审批决定数量与待审批工具调用不一致')
 
-  await runWithController(sessionId, new Command({ resume: { decisions } }), signal, onEvent)
+  const normalizedDecisions = decisions.map(decision =>
+    decision.type === 'respond' ? { type: 'reject' as const, message: decision.message ?? '用户未批准该工具调用' } : decision
+  )
+  await runWithController(sessionId, new Command({ resume: { decisions: normalizedDecisions } }), signal, onEvent)
 }

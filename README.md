@@ -2,7 +2,7 @@
 
 这是将 M4 后端 `AiHandler.kt` 的 AI 对话逻辑重构为 Next.js 的个人学习项目，包含：
 
-- Deep Agents + LangGraph 内存会话和上下文串联
+- LangChain 原生 Agent + LangGraph 内存会话和上下文串联
 - SSE 流式对话、工具调用和人工审批闭环
 - 火山引擎录音转文字
 - Next.js Route Handlers 后端与 React 聊天界面
@@ -55,7 +55,7 @@ npm run dev
 
 ## Skills
 
-每个 Skill 固定存放在 `src/skills/<skill-name>/SKILL.md`，其中 `SKILL.md` 必须包含 `name` 和 `description` frontmatter，且 `name` 与目录名一致。Deep Agents 创建时通过 `skills: ['/src/skills/']` 挂载技能目录，启动时只注入名称和描述；任务匹配后，模型使用内置 `read_file` 工具按需读取完整内容及其脚本、参考资料。
+每个 Skill 固定存放在 `src/skills/<skill-name>/SKILL.md`，其中 `SKILL.md` 必须包含 `name` 和 `description` frontmatter，且 `name` 与目录名一致。Agent 启动时注册工作区工具，并通过 `read_skill` 按需读取 Skill 的完整内容及其脚本、参考资料。
 
 会话元数据保存在 SQLite 的 `session` 表中，LangGraph 线程状态由 `SqliteSaver` 持久化到同一数据库。浏览器会在刷新时恢复本地保存的 `sessionId`，服务重启后仍可继续已有会话。
 
