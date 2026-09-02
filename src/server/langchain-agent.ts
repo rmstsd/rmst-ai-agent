@@ -5,16 +5,17 @@ import { stampRetryable } from '@langchain/core/errors'
 import { createDeepAgent, LocalShellBackend } from 'deepagents'
 import { createArkModel, requireArkConfig } from './ark-responses-compat'
 import { systemPrompts } from './system-prompts'
-import { coerceMessageLikeToMessage, mapStoredMessageToChatMessage } from '@langchain/core/messages'
+import { BaseMessage, coerceMessageLikeToMessage, mapStoredMessageToChatMessage } from '@langchain/core/messages'
 import type { StreamEvent } from '@langchain/core/tracers/log_stream'
 import { AIMessageChunk, tool, toolRetryMiddleware, toolErrorMiddleware } from 'langchain'
 import z from 'zod'
 
 export type AgentStreamEvent =
+  | { type: 'MessageStart'; responseId?: string }
   | { type: 'Text'; text: string }
   | { type: 'Reasoning'; text: string }
   | { type: 'Function'; name: string; args?: string; callId: string }
-  | { type: 'FunctionResult'; name: string; output?: string; callId: string }
+  | { type: 'FunctionResult'; name: string; output?: string; status?: 'success' | 'error'; callId: string }
   | { type: 'Approval'; approval: PendingApproval }
   | { type: 'Done'; interrupted?: boolean; responseId?: string }
 
@@ -42,9 +43,9 @@ async function getAgent() {
           //   throw stampRetryable(new Error('不支持 沈阳'), false)
           // }
 
-          // if (random > 0.5) {
-          //   throw stampRetryable(new Error('Malformed record identifier'), false)
-          // }
+          if (random > 0.4) {
+            throw stampRetryable(new Error('模拟错误'), true)
+          }
           return `${location}温度是30摄氏度`
         },
         {
@@ -63,14 +64,14 @@ async function getAgent() {
         skills: ['/src/skills/'],
         systemPrompt: systemPrompts.join('\n'),
         middleware: [
+          toolErrorMiddleware({
+            onError: (error, request) => `调用工具 '${request.toolCall.name}' 失败: ${errorMessage(error)}。请检查后重试。`
+          }),
           toolRetryMiddleware({
             maxRetries: 2,
             backoffFactor: 2.0,
-            initialDelayMs: 1000
-          }),
-          toolErrorMiddleware({
-            onError: (error, request) =>
-              `调用工具 '${request.toolCall.name}' 失败: ${error instanceof Error ? error.message : String(error)}。请检查后重试。`
+            initialDelayMs: 1000,
+            onFailure: 'error'
           })
         ],
         checkpointer,
@@ -79,8 +80,8 @@ async function getAgent() {
           edit_file: true,
           delete: true,
           execute: true,
-          task: true,
-          get_weather: true
+          task: true
+          // get_weather: true
         }
       })
     })()
@@ -146,6 +147,46 @@ function stringifyArgs(value: unknown) {
   } catch {
     return String(value)
   }
+}
+
+function errorMessage(value: unknown) {
+  const message =
+    value instanceof Error ? value.message : isRecord(value) && typeof value.message === 'string' ? value.message : String(value)
+  const stackIndex = message.search(/\r?\n\s*at\s+/)
+  return message
+    .slice(0, stackIndex === -1 ? message.length : stackIndex)
+    .replace(/^(?:Error|TypeError|RangeError|ReferenceError|SyntaxError):\s*/, '')
+    .trim()
+}
+
+function toolOutputToText(value: unknown, cleanError = false) {
+  if (typeof value === 'string') return cleanError ? errorMessage(value) : value
+  if (value instanceof Error) return errorMessage(value)
+  if (BaseMessage.isInstance(value)) {
+    const parts = contentToParts(value.content)
+    const status = (value as BaseMessage & { status?: string }).status
+    const output = parts.text || parts.reasoning || '无'
+    return cleanError || status === 'error' ? errorMessage(output) : output
+  }
+  if (isRecord(value)) {
+    if (value.error !== undefined) return errorMessage(value.error)
+    if (isRecord(value.kwargs)) return toolOutputToText(value.kwargs, cleanError || value.status === 'error')
+    if ('content' in value) {
+      const parts = contentToParts(value.content)
+      if (parts.text || parts.reasoning) {
+        const output = parts.text || parts.reasoning
+        return cleanError || value.status === 'error' ? errorMessage(output) : output
+      }
+    }
+  }
+  const parts = contentToParts(value)
+  return parts.text || parts.reasoning || stringifyArgs(value) || '无'
+}
+
+function toolOutputStatus(value: unknown): 'success' | 'error' {
+  if (!isRecord(value)) return 'success'
+  if (value.status === 'error') return 'error'
+  return isRecord(value.kwargs) ? toolOutputStatus(value.kwargs) : 'success'
 }
 
 function toStoredMessage(value: unknown): LangChainHistoryMessage | undefined {
@@ -257,11 +298,16 @@ async function streamRun(sessionId: string, input: unknown, signal: AbortSignal,
   }
   const stream = await agent.streamEvents(input as never, config as never)
   const emittedToolCalls = new Set<string>()
+  let chatModelRunId = ''
 
   for await (const event of stream as AsyncIterable<StreamEvent>) {
     if (event.event === 'on_chat_model_stream') {
       const chunk = event.data?.chunk
       if (!AIMessageChunk.isInstance(chunk)) continue
+      if (event.run_id !== chatModelRunId) {
+        chatModelRunId = event.run_id
+        onEvent({ type: 'MessageStart', responseId: event.run_id })
+      }
       const parts = contentToParts(chunk?.content)
       const additionalKwargs = chunk.additional_kwargs
       const reasoning =
@@ -287,7 +333,25 @@ async function streamRun(sessionId: string, input: unknown, signal: AbortSignal,
 
     if (event.event === 'on_tool_end') {
       const callId = event.run_id ?? `${event.name ?? 'tool'}-${Date.now()}`
-      onEvent({ type: 'FunctionResult', name: event.name ?? 'tool', output: stringifyArgs(event.data?.output), callId })
+      const output = event.data?.output
+      onEvent({
+        type: 'FunctionResult',
+        name: event.name ?? 'tool',
+        output: toolOutputToText(output),
+        status: toolOutputStatus(output),
+        callId
+      })
+    }
+
+    if (event.event === 'on_tool_error') {
+      const callId = event.run_id ?? `${event.name ?? 'tool'}-${Date.now()}`
+      onEvent({
+        type: 'FunctionResult',
+        name: event.name ?? 'tool',
+        output: toolOutputToText(event.data?.error, true),
+        status: 'error',
+        callId
+      })
     }
   }
 

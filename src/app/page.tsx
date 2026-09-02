@@ -50,12 +50,29 @@ function contentToParts(content: unknown) {
       continue
     }
     if (!item || typeof item !== 'object') continue
-    const value = item as { type?: unknown; text?: unknown; reasoning?: unknown; reasoning_content?: unknown }
+    const value = item as {
+      type?: unknown
+      text?: unknown
+      reasoning?: unknown
+      reasoning_content?: unknown
+      content?: unknown
+      summary?: unknown
+    }
     const type = typeof value.type === 'string' ? value.type.toLowerCase() : ''
-    const reasoning = typeof value.reasoning === 'string' ? value.reasoning : typeof value.reasoning_content === 'string' ? value.reasoning_content : ''
-    const text = typeof value.text === 'string' ? value.text : ''
-    if (reasoning || type === 'reasoning' || type === 'analysis') parts.reasoning = appendDelta(parts.reasoning, reasoning || text)
-    else parts.text += text
+    const isReasoning = ['analysis', 'reasoning', 'reasoning_content', 'thinking', 'thought'].includes(type)
+    const summaryParts = isReasoning && Array.isArray(value.summary) ? contentToParts(value.summary) : undefined
+    const reasoning =
+      typeof value.reasoning === 'string'
+        ? value.reasoning
+        : typeof value.reasoning_content === 'string'
+          ? value.reasoning_content
+          : summaryParts?.reasoning || summaryParts?.text || ''
+    const text = typeof value.text === 'string' ? value.text : typeof value.content === 'string' ? value.content : ''
+    if (reasoning) parts.reasoning += reasoning
+    if (text) {
+      if (isReasoning) parts.reasoning += text
+      else parts.text += text
+    }
   }
   return parts
 }
@@ -109,7 +126,14 @@ function historyToMessages(history: LangChainHistoryMessage[]): ChatMessage[] {
             if (!call || typeof call !== 'object') return []
             const value = call as { id?: unknown; name?: unknown; args?: unknown }
             if (typeof value.name !== 'string') return []
-            return [{ id: typeof value.id === 'string' ? value.id : `${value.name}-${index}`, name: value.name, args: stringify(value.args) }]
+            return [
+              {
+                id: typeof value.id === 'string' ? value.id : `${value.name}-${index}`,
+                name: value.name,
+                args: stringify(value.args),
+                status: 'success' as const
+              }
+            ]
           })
         : []
       const reasoning = parts.reasoning || reasoningToText(additional?.reasoning) || reasoningToText(additional?.reasoning_content)
@@ -121,8 +145,21 @@ function historyToMessages(history: LangChainHistoryMessage[]): ChatMessage[] {
       const assistant = messages.at(-1)
       const toolCallId = typeof data.tool_call_id === 'string' ? data.tool_call_id : `tool-output-${index}`
       const call = assistant?.role === 'assistant' ? assistant.toolCalls?.find(item => item.id === toolCallId) : undefined
-      if (call) call.output = parts.text || parts.reasoning || stringify(data.content) || '无'
-      else if (assistant?.role === 'assistant') assistant.toolCalls = [...(assistant.toolCalls ?? []), { id: toolCallId, name: typeof data.name === 'string' ? data.name : 'tool', output: parts.text || parts.reasoning || '无' }]
+      const status = data.status === 'error' ? 'error' : 'success'
+      if (call) {
+        call.output = parts.text || parts.reasoning || stringify(data.content) || '无'
+        call.status = status
+      } else if (assistant?.role === 'assistant') {
+        assistant.toolCalls = [
+          ...(assistant.toolCalls ?? []),
+          {
+            id: toolCallId,
+            name: typeof data.name === 'string' ? data.name : 'tool',
+            output: parts.text || parts.reasoning || '无',
+            status
+          }
+        ]
+      }
     }
   }
   return messages
@@ -130,7 +167,13 @@ function historyToMessages(history: LangChainHistoryMessage[]): ChatMessage[] {
 
 function updateToolCall(toolCalls: ChatToolCall[] | undefined, callId: string, update: Partial<ChatToolCall>) {
   const nextToolCalls = [...(toolCalls ?? [])]
-  const index = nextToolCalls.findIndex(call => call.id === callId)
+  let index = nextToolCalls.findIndex(call => call.id === callId)
+  if (index === -1 && update.name) {
+    index = nextToolCalls.findLastIndex(call => {
+      if (call.name !== update.name || (call.output !== undefined && call.status !== 'error')) return false
+      return update.args === undefined || call.args === update.args
+    })
+  }
   if (index === -1) {
     nextToolCalls.push({ id: callId, name: update.name ?? 'tool', ...update })
     return nextToolCalls
@@ -171,6 +214,7 @@ export default function ChatPage() {
   const messagesRef = useRef<HTMLDivElement>(null)
   const initializedRef = useRef(false)
   const assistantMessageIdRef = useRef('')
+  const assistantModelStartedRef = useRef(false)
 
   useEffect(() => {
     if (initializedRef.current) return
@@ -208,23 +252,45 @@ export default function ChatPage() {
   }
 
   function updateAssistantMessage(id: string, event: ChatStreamEvent) {
+    if (event.type === 'MessageStart') {
+      if (!assistantModelStartedRef.current) {
+        assistantModelStartedRef.current = true
+        return
+      }
+      const activeId = assistantMessageIdRef.current || id
+      const nextMessage = createMessage('assistant', '')
+      assistantMessageIdRef.current = nextMessage.id
+      setMessages(current => current.map(message => (message.id === activeId ? { ...message, status: 'done' as const } : message)).concat(nextMessage))
+      return
+    }
+
+    const activeId = assistantMessageIdRef.current || id
     if (event.type === 'Approval') setPendingApproval(event.approval)
     if (event.type === 'Error') setError(event.message)
 
     setMessages(current =>
       current.map(message => {
-        if (message.id !== id) return message
-        if (event.type === 'Text') return { ...message, content: message.content + event.text }
+        if (message.id !== activeId) return message
+        if (event.type === 'Text') return { ...message, content: appendDelta(message.content, event.text) }
         if (event.type === 'Reasoning') return { ...message, reasoning: appendDelta(message.reasoning ?? '', event.text) }
         if (event.type === 'Function')
           return {
             ...message,
-            toolCalls: updateToolCall(message.toolCalls, event.callId, { name: event.name, args: event.args })
+            toolCalls: updateToolCall(message.toolCalls, event.callId, {
+              name: event.name,
+              args: event.args,
+              output: undefined,
+              status: undefined
+            })
           }
         if (event.type === 'FunctionResult')
           return {
             ...message,
-            toolCalls: updateToolCall(message.toolCalls, event.callId, { name: event.name, output: event.output ?? '无' })
+            toolCalls: updateToolCall(message.toolCalls, event.callId, {
+              name: event.name,
+              output: event.output ?? '无',
+              status: event.status ?? 'success'
+            })
           }
         if (event.type === 'Error') return { ...message, content: message.content || event.message, status: 'error' }
         if (event.type === 'Done') return { ...message, status: event.interrupted ? 'streaming' : 'done' }
@@ -248,6 +314,7 @@ export default function ChatPage() {
     const userMessage = createMessage('user', content)
     const assistantMessage = createMessage('assistant', '')
     assistantMessageIdRef.current = assistantMessage.id
+    assistantModelStartedRef.current = false
     setMessages(current => [...current, userMessage, assistantMessage])
     setInput('')
     setError('')
@@ -267,6 +334,7 @@ export default function ChatPage() {
 
   async function approvePending(approved: boolean) {
     if (!pendingApproval || !sessionId || loading) return
+    assistantModelStartedRef.current = Boolean(assistantMessageIdRef.current)
     const assistantId = ensureAssistantMessage()
     const decisions = pendingApproval.requests.map(request =>
       approved && request.allowedDecisions.includes('approve')
@@ -363,7 +431,7 @@ export default function ChatPage() {
                       <article className="message-tool" key={toolCall.id}>
                         <div className="message-tool-header">
                           <strong>{toolCall.name}</strong>
-                          <span>{toolCall.output === undefined ? '执行中' : '已完成'}</span>
+                          <span>{toolCall.output === undefined ? '执行中' : toolCall.status === 'error' ? '失败' : '已完成'}</span>
                         </div>
                         {toolCall.args && (
                           <pre>

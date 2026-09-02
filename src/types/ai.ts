@@ -7,6 +7,7 @@ export interface ChatToolCall {
   name: string
   args?: string
   output?: string
+  status?: 'success' | 'error'
 }
 
 export interface ChatMessage {
@@ -47,10 +48,11 @@ export interface PendingApproval {
 }
 
 export type ChatStreamEvent =
+  | { type: 'MessageStart'; responseId?: string }
   | { type: 'Text'; text: string }
   | { type: 'Reasoning'; text: string }
   | { type: 'Done'; responseId?: string; interrupted?: boolean }
   | { type: 'Error'; code?: string; message: string }
   | { type: 'Function'; name: string; args?: string; callId: string }
-  | { type: 'FunctionResult'; name: string; output?: string; callId: string }
+  | { type: 'FunctionResult'; name: string; output?: string; status?: 'success' | 'error'; callId: string }
   | { type: 'Approval'; approval: PendingApproval }
