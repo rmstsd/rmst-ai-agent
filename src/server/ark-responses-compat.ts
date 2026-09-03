@@ -84,7 +84,7 @@ function patchArkWithConfigCompatibility() {
 }
 
 export function createArkModel() {
-  // patchArkWithConfigCompatibility()
+  patchArkWithConfigCompatibility()
 
   const model = new ChatOpenAI({
     apiKey: aiConfig.ark.apiKey,
@@ -100,6 +100,6 @@ export function createArkModel() {
     }
   })
 
-  // patchArkResponsesModel(model)
+  patchArkResponsesModel(model)
   return model
 }

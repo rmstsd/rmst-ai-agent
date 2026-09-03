@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   try {
     body = await request.json()
   } catch (error) {
-    console.error('[API /api/ai/history] 解析请求体失败', error)
+    console.log('[API /api/ai/history] 解析请求体失败', error)
     return Response.json({ message: '请求参数不正确' }, { status: 400 })
   }
 
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
   try {
     return Response.json(await getConversationHistory(parsed.data.sessionId))
   } catch (error) {
-    console.error('[API /api/ai/history] 获取会话历史失败', error)
+    console.log('[API /api/ai/history] 获取会话历史失败', error)
     return Response.json({ message: error instanceof Error ? error.message : String(error) }, { status: 500 })
   }
 }

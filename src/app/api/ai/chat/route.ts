@@ -23,7 +23,7 @@ function createSseResponse(task: (send: (event: ChatStreamEvent) => void) => Pro
       task(send)
         .catch(error => {
           if (error instanceof Error && error.name === 'AbortError') return
-          console.error('[API /api/ai/chat] 请求失败', error)
+          console.log('[API /api/ai/chat] 请求失败', error)
           send({ type: 'Error', message: error instanceof Error ? error.message : String(error) })
         })
         .finally(() => {
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
   try {
     body = await request.json()
   } catch (error) {
-    console.error('[API /api/ai/chat] 解析请求体失败', error)
+    console.log('[API /api/ai/chat] 解析请求体失败', error)
     return Response.json({ message: '请求参数不正确' }, { status: 400 })
   }
 

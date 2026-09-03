@@ -492,7 +492,7 @@ async function runWithController(
     if (isAbortError(error)) {
       console.warn('[AI Agent] 生成已取消', { sessionId })
     } else {
-      console.error('[AI Agent] 流式调用失败', { sessionId, error })
+      console.log('[AI Agent] 流式调用失败', { sessionId, error })
     }
     throw error
   } finally {
