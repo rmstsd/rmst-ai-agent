@@ -6,7 +6,7 @@ import { createArkModel, requireArkConfig } from './ark-responses-compat'
 import { systemPrompts } from './system-prompts'
 import { BaseMessage, coerceMessageLikeToMessage, mapStoredMessageToChatMessage } from '@langchain/core/messages'
 import type { StreamEvent } from '@langchain/core/tracers/log_stream'
-import { AIMessageChunk, createAgent, humanInTheLoopMiddleware, tool, toolRetryMiddleware, toolErrorMiddleware } from 'langchain'
+import { AIMessage, AIMessageChunk, createAgent, humanInTheLoopMiddleware, tool, toolRetryMiddleware, toolErrorMiddleware } from 'langchain'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import { exec } from 'node:child_process'
@@ -420,6 +420,19 @@ async function streamRun(sessionId: string, input: unknown, signal: AbortSignal,
       }
       const parts = contentToParts(chunk?.content)
       const additionalKwargs = chunk.additional_kwargs
+      const reasoning =
+        parts.reasoning ||
+        (typeof additionalKwargs?.reasoning_content === 'string' ? additionalKwargs.reasoning_content : '') ||
+        (typeof additionalKwargs?.reasoning === 'string' ? additionalKwargs.reasoning : '')
+      if (reasoning) onEvent({ type: 'Reasoning', text: reasoning })
+      if (parts.text) onEvent({ type: 'Text', text: parts.text })
+    }
+
+    if (event.event === 'on_chat_model_end') {
+      const output = event.data?.output
+      if (!AIMessage.isInstance(output) && !AIMessageChunk.isInstance(output)) continue
+      const parts = contentToParts(output.content)
+      const additionalKwargs = output.additional_kwargs
       const reasoning =
         parts.reasoning ||
         (typeof additionalKwargs?.reasoning_content === 'string' ? additionalKwargs.reasoning_content : '') ||

@@ -4,6 +4,6 @@ export const aiConfig = {
     baseUrl: 'https://api-sp.claudecode.net.cn/api/codex/backend-api/codex',
     modelId: 'gpt-5.6-terra',
     timeoutMs: 60_000,
-    store: true
+    store: false
   }
 } as const
