@@ -2,11 +2,19 @@ import { aiConfig } from '@/config/ai-config'
 import type { ApprovalDecision, ApprovalRequest, LangChainHistoryMessage, PendingApproval } from '@/types/ai'
 import { Command, MemorySaver } from '@langchain/langgraph'
 import { stampRetryable } from '@langchain/core/errors'
-import { createArkModel, requireArkConfig } from './ark-responses-compat'
+import { createCodexModel } from './codex-responses-compat'
 import { systemPrompts } from './system-prompts'
 import { BaseMessage, coerceMessageLikeToMessage, mapStoredMessageToChatMessage } from '@langchain/core/messages'
 import type { StreamEvent } from '@langchain/core/tracers/log_stream'
-import { AIMessage, AIMessageChunk, createAgent, humanInTheLoopMiddleware, tool, toolRetryMiddleware, toolErrorMiddleware } from 'langchain'
+import {
+  AIMessage,
+  AIMessageChunk,
+  createAgent,
+  humanInTheLoopMiddleware,
+  tool,
+  toolRetryMiddleware,
+  toolErrorMiddleware
+} from 'langchain'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import { exec } from 'node:child_process'
@@ -21,7 +29,10 @@ export type AgentStreamEvent =
   | { type: 'FunctionResult'; name: string; output?: string; status?: 'success' | 'error'; callId: string }
   | { type: 'Approval'; approval: PendingApproval }
   | { type: 'Done'; interrupted?: boolean; responseId?: string }
-
+function requireArkConfig() {
+  if (!aiConfig.ark.apiKey || !aiConfig.ark.modelId || !aiConfig.ark.baseUrl)
+    throw new Error('请先在 src/config/ai-config.ts 中填写 Ark 配置')
+}
 const sessionControllers = new Map<string, AbortController>()
 const checkpointer = new MemorySaver()
 const execAsync = promisify(exec)
@@ -29,7 +40,7 @@ const workspaceRoot = path.resolve(/* turbopackIgnore: true */ process.cwd())
 
 type Agent = ReturnType<typeof createAgent>
 let agentPromise: Promise<Agent> | undefined
-const model = createArkModel()
+const model = createCodexModel()
 
 function resolveWorkspacePath(input: string) {
   const resolved = path.resolve(/* turbopackIgnore: true */ workspaceRoot, input)
