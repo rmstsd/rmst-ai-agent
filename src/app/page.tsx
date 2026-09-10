@@ -141,7 +141,7 @@ export default function Home() {
     )
 
     try {
-      const response = await fetch(`${baseUrl}/api/chat/approve`, {
+      const response = await fetch(`/api/chat/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId, approvalId: message.approvalId, approved })
@@ -167,7 +167,7 @@ export default function Home() {
     scrollToBottom()
 
     try {
-      const response = await fetch(`${baseUrl}/api/chat`, {
+      const response = await fetch(`/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId, message: content })
