@@ -3,37 +3,74 @@
 import { observer, useLocalObservable } from 'mobx-react-lite'
 import { Settings2 } from 'lucide-react'
 import './page.scss'
+import { UiMessage } from './type'
 
-type ToolState = {
-  id: string
-  name: string
-  args: string
-  status: 'pending' | 'running' | 'success' | 'error'
-  result?: string
-  error?: string
+type ToolStatus = NonNullable<UiMessage['status']>
+type SSEPayload = {
+  type: string
+  data?: unknown
+  id?: unknown
+  name?: string
+  args?: string
+  input?: unknown
+  output?: unknown
+  error?: unknown
 }
-type ChatMessage = { id: string; role: 'user' | 'assistant' | 'tool'; content: string; tool?: ToolState }
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
 
 function formatValue(value: unknown) {
   if (typeof value === 'string') return value
   try {
-    return JSON.stringify(value, null, 2)
+    const formatted = JSON.stringify(value, null, 2)
+    return formatted === undefined ? String(value) : formatted
   } catch {
     return String(value)
   }
 }
 
-function toolStatusLabel(status: ToolState['status']) {
+function extractText(content: unknown): string {
+  if (typeof content === 'string') return content
+  if (!Array.isArray(content)) return ''
+  return content
+    .map(part => {
+      if (typeof part === 'string') return part
+      if (!part || typeof part !== 'object') return ''
+      const text = (part as { text?: unknown }).text
+      return typeof text === 'string' ? text : ''
+    })
+    .join('')
+}
+
+function extractToolCalls(value: unknown): UiMessage['tool_calls'] {
+  if (!Array.isArray(value)) return undefined
+  const toolCalls = value.filter(isRecord).map(toolCall => ({
+    id: typeof toolCall.id === 'string' ? toolCall.id : '',
+    name: typeof toolCall.name === 'string' ? toolCall.name : '',
+    args: typeof toolCall.args === 'string' ? toolCall.args : toolCall.args == null ? '' : formatValue(toolCall.args)
+  }))
+  return toolCalls.length > 0 ? toolCalls : undefined
+}
+
+function toolStatusLabel(status: ToolStatus) {
   return { pending: '等待调用', running: '执行中', success: '已完成', error: '失败' }[status]
 }
 
 export default observer(function Home() {
-  const state = useLocalObservable(() => ({ input: '沈阳和上海天气如何', loading: false, messages: [] as ChatMessage[] }))
+  const state = useLocalObservable(() => ({ input: '沈阳和上海天气如何', loading: false, messages: [] as UiMessage[] }))
+
+  console.log(state.messages)
   const sendMessage = async () => {
     const text = state.input.trim()
     if (!text || state.loading) return
     state.loading = true
-    state.messages.push({ id: `user-${Date.now()}`, role: 'user', content: text })
+    state.messages.push({
+      id: `user-${Date.now()}`,
+      type: 'user',
+      content: text
+    })
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
@@ -45,13 +82,22 @@ export default observer(function Home() {
       const decoder = new TextDecoder()
       let pending = ''
       let finished = false
-      const findTool = (id?: string) => state.messages.find(message => message.role === 'tool' && message.tool?.id === id)
+      let currentAssistantId: string | undefined
+      const findTool = (id?: string) => state.messages.find(message => message.type === 'tool' && message.tool_call_id === id)
       const ensureTool = (id: string, name = '工具') => {
         const existing = findTool(id)
-        if (existing?.tool) return existing.tool
-        const toolState: ToolState = { id, name, args: '', status: 'pending' }
-        state.messages.push({ id: `tool-${id}`, role: 'tool', content: '', tool: toolState })
-        return toolState
+        if (existing) return existing
+        const message: UiMessage = {
+          id: `tool-${id}`,
+          type: 'tool',
+          content: '',
+          tool_call_id: id,
+          name,
+          args: '',
+          status: 'pending'
+        }
+        state.messages.push(message)
+        return message
       }
       while (!finished) {
         const { done, value } = await reader.read()
@@ -66,48 +112,78 @@ export default observer(function Home() {
             ?.slice(5)
             .trim()
           if (!data || data === '[DONE]') continue
-          const payload = JSON.parse(data) as { type: string; [key: string]: any }
-
-          if (payload.type === 'assistant_delta') {
-            const isExist = state.messages.some(message => message.id === payload.id)
-            if (!isExist) {
-              state.messages.push({ id: payload.id, role: 'assistant', content: '' })
-            }
-
-            const assistant = state.messages.find(message => message.id === payload.id)
-            if (payload.type === 'assistant_delta' && assistant) {
-              assistant.content += payload.text ?? ''
+          const payload = JSON.parse(data) as SSEPayload
+          if (payload.type === 'ai') {
+            const chunkData = isRecord(payload.data) ? payload.data : {}
+            const chunkId = typeof chunkData.id === 'string' ? chunkData.id : undefined
+            const messageId = currentAssistantId ?? chunkId ?? `assistant-${Date.now()}`
+            const chunkToolCalls = extractToolCalls(chunkData.tool_calls)
+            if (!currentAssistantId) {
+              currentAssistantId = messageId
+              state.messages.push({
+                id: messageId,
+                type: 'ai',
+                content: extractText(chunkData.content),
+                ...(chunkToolCalls ? { tool_calls: chunkToolCalls } : {})
+              })
+            } else {
+              const assistant = state.messages.find(message => message.type === 'ai' && message.id === currentAssistantId)
+              if (assistant) {
+                assistant.content += extractText(chunkData.content)
+                if (chunkToolCalls) assistant.tool_calls = chunkToolCalls
+              }
             }
           }
-
-          if (payload.type === 'tool_call_start')
-            ensureTool(payload.id ?? `unknown-${Date.now()}`, payload.name).name = payload.name || '工具'
-          if (payload.type === 'tool_call_args') ensureTool(payload.id ?? `unknown-${Date.now()}`).args += payload.args ?? ''
+          if (payload.type === 'tool_call_start') {
+            const toolData = ensureTool(String(payload.id ?? `unknown-${Date.now()}`), payload.name)
+            toolData.name = payload.name || '工具'
+          }
+          if (payload.type === 'tool_call_args') {
+            const toolData = ensureTool(String(payload.id ?? `unknown-${Date.now()}`))
+            toolData.args = `${toolData.args ?? ''}${payload.args ?? ''}`
+          }
           if (payload.type === 'tool_start') {
-            const toolState = ensureTool(payload.id ?? `unknown-${Date.now()}`, payload.name)
-            toolState.name = payload.name || toolState.name
-            toolState.status = 'running'
-            toolState.args = formatValue(payload.input)
+            const toolData = ensureTool(String(payload.id ?? `unknown-${Date.now()}`), payload.name)
+            toolData.name = payload.name || toolData.name
+            toolData.status = 'running'
+            toolData.input = payload.input
+            toolData.args = formatValue(payload.input)
           }
           if (payload.type === 'tool_end') {
-            const toolState = ensureTool(payload.id ?? `unknown-${Date.now()}`, payload.name)
-            toolState.status = 'success'
-            toolState.result = formatValue(payload.output)
+            const toolData = ensureTool(String(payload.id ?? `unknown-${Date.now()}`), payload.name)
+            toolData.status = 'success'
+            toolData.content = formatValue(payload.output)
+            currentAssistantId = undefined
           }
           if (payload.type === 'tool_error') {
-            const toolState = ensureTool(payload.id ?? `unknown-${Date.now()}`, payload.name)
-            toolState.status = 'error'
-            toolState.error = formatValue(payload.error)
+            const toolData = ensureTool(String(payload.id ?? `unknown-${Date.now()}`), payload.name)
+            toolData.status = 'error'
+            toolData.error = payload.error
+            currentAssistantId = undefined
           }
-          if (payload.type === 'error' && assistant) assistant.content = `请求失败：${payload.error}`
+          if (payload.type === 'error') {
+            const assistant = currentAssistantId
+              ? state.messages.find(message => message.type === 'ai' && message.id === currentAssistantId)
+              : undefined
+            if (assistant) assistant.content = `请求失败：${formatValue(payload.error)}`
+            else {
+              currentAssistantId = `assistant-${Date.now()}`
+              state.messages.push({
+                id: currentAssistantId,
+                type: 'ai',
+                content: `请求失败：${formatValue(payload.error)}`
+              })
+            }
+          }
           if (payload.type === 'done') finished = true
         }
       }
-    } catch (error) {
+    } catch {
     } finally {
       state.loading = false
     }
   }
+
   return (
     <main className="chat-page">
       <section className="chat-shell" aria-label="AI 对话">
@@ -120,31 +196,34 @@ export default observer(function Home() {
         </header>
         <div className="conversation" aria-live="polite">
           {state.messages.length === 0 && <div className="empty-state">输入问题，查看模型如何调用天气工具。</div>}
-          {state.messages.map(message => (
-            <article className={`message message-${message.role}`} key={message.id}>
-              {message.role !== 'tool' && <div className="message-label">{message.role === 'user' ? '你' : '助手'}</div>}
-              {message.role !== 'tool' && (
-                <div className="message-content">{message.content || (state.loading ? '正在思考…' : '')}</div>
-              )}
-              {message.role === 'tool' && message.tool && (
-                <div className={`tool-card tool-${message.tool.status}`}>
-                  <div className="tool-heading">
-                    <Settings2 className="tool-icon" size={16} aria-hidden="true" />
-                    <strong>{message.tool.name}</strong>
-                    <span className="tool-status">{toolStatusLabel(message.tool.status)}</span>
-                  </div>
-                  {message.tool.args && <pre>{message.tool.args}</pre>}
-                  {message.tool.result && (
-                    <div className="tool-result">
-                      <span>结果</span>
-                      {message.tool.result}
+          {state.messages.map(message => {
+            const role = message.type === 'user' ? 'user' : message.type === 'ai' ? 'assistant' : 'tool'
+            const toolStatus = message.status ?? 'pending'
+            return (
+              <article className={`message message-${role}`} key={message.id}>
+                {message.type !== 'tool' && <div className="message-label">{message.type === 'user' ? '你' : '助手'}</div>}
+                {message.type !== 'tool' && (
+                  <div className="message-content">{message.content || (state.loading ? '正在思考…' : '')}</div>
+                )}
+                {message.type === 'tool' && (
+                  <div className={`tool-card tool-${toolStatus}`}>
+                    <div className="tool-heading">
+                      <strong>{message.name}</strong>
+                      <span className="tool-status">{toolStatusLabel(toolStatus)}</span>
                     </div>
-                  )}
-                  {message.tool.error && <div className="tool-error">{message.tool.error}</div>}
-                </div>
-              )}
-            </article>
-          ))}
+                    {message.args ? <pre>{message.args}</pre> : null}
+                    {toolStatus === 'success' && (
+                      <div className="tool-result">
+                        <span>结果</span>
+                        {message.content}
+                      </div>
+                    )}
+                    {message.error ? <div className="tool-error">{formatValue(message.error)}</div> : null}
+                  </div>
+                )}
+              </article>
+            )
+          })}
         </div>
         <form
           className="composer"
