@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   return NextResponse.json(data)
 
   function mapStateToUiMessages(): UiMessage {
-    return state.values.messages.map(value => ({
+    return state.values.messages.map((value: any) => ({
       id: value.id,
       type: value.type,
       content: value.content,

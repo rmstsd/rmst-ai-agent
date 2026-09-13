@@ -4,3 +4,9 @@ out/
 *.log
 .DS_Store
 next-env.d.ts
+%SystemDrive%/ProgramData/Microsoft/Windows/Caches/{6AF0698E-D558-4F6E-9B3C-3716689AF493}.2.ver0x0000000000000001.db
+%SystemDrive%/ProgramData/Microsoft/Windows/Caches/{8E97D1D5-D7D9-453A-9D9A-53FF94364043}.2.ver0x0000000000000001.db
+%SystemDrive%/ProgramData/Microsoft/Windows/Caches/{A103CAD7-AACB-449F-8BCC-8C3CA1BBC85F}.2.ver0x0000000000000001.db
+%SystemDrive%/ProgramData/Microsoft/Windows/Caches/{B9A7F51D-A549-47C7-B644-091C197C40D7}.2.ver0x0000000000000001.db
+%SystemDrive%/ProgramData/Microsoft/Windows/Caches/{DDF571F2-BE98-426D-8288-1A9A39C3FDA2}.2.ver0x0000000000000001.db
+%SystemDrive%/ProgramData/Microsoft/Windows/Caches/cversions.2.db
