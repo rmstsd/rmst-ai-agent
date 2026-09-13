@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --port 5600 --inspect",
     "build": "next build",
     "start": "next start"
   },
@@ -11,18 +11,20 @@
     "@langchain/core": "^1.2.9",
     "@langchain/langgraph": "^1.4.13",
     "@langchain/openai": "^1.5.10",
+    "@tailwindcss/postcss": "^4.1.11",
     "langchain": "^1.5.10",
     "langsmith": "^0.10.1",
-    "octokit": "^5.0.5",
-    "ws": "^8.21.3",
-    "yaml": "^2.9.0",
-    "@tailwindcss/postcss": "^4.1.11",
     "lucide-react": "^0.468.0",
+    "mobx": "^7.0.3",
+    "mobx-react-lite": "^5.0.3",
     "next": "^16.3.0",
+    "octokit": "^5.0.5",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "sass": "^1.89.2",
     "tailwindcss": "^4.1.11",
+    "ws": "^8.21.3",
+    "yaml": "^2.9.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
