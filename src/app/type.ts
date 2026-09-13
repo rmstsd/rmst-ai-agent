@@ -7,7 +7,7 @@ export type UiMessage = {
   tool_call_id?: string
   name?: string
   args?: string
-  status?: 'pending' | 'running' | 'success' | 'error'
+  status?: 'pending' | 'approval_required' | 'running' | 'success' | 'error'
   input?: unknown
   error?: unknown
 }

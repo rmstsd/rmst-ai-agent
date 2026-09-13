@@ -20,6 +20,7 @@
 .message-tool { max-width: 88%; align-self: flex-start; }
 .tool-card { padding: 14px 16px; border: 1px solid #cbd8dd; border-left: 3px solid #8ca4ad; border-radius: 6px; background: #f8fafb; font-size: 13px; }
 .tool-card.tool-running { border-left-color: #087f8c; }
+.tool-card.tool-approval_required { border-left-color: #b7791f; background: #fffaf0; }
 .tool-card.tool-success { border-left-color: #2c8c62; }
 .tool-card.tool-error { border-left-color: #bf4b4b; }
 .tool-heading { display: flex; align-items: center; gap: 8px; }
@@ -29,6 +30,11 @@
 .tool-result, .tool-error { margin-top: 10px; line-height: 1.5; overflow-wrap: anywhere; }
 .tool-result span { margin-right: 8px; color: #2c8c62; font-weight: 700; }
 .tool-error { color: #a53f3f; }
+.tool-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.tool-actions button { display: inline-flex; align-items: center; gap: 5px; min-height: 32px; padding: 0 10px; border: 1px solid #087f8c; border-radius: 4px; background: #087f8c; color: #fff; cursor: pointer; font: inherit; font-size: 13px; font-weight: 700; }
+.tool-actions button + button { border-color: #a53f3f; background: #fff; color: #a53f3f; }
+.tool-actions button:disabled { cursor: not-allowed; opacity: .6; }
+.tool-actions button:focus-visible { outline: 3px solid rgba(8, 127, 140, .3); outline-offset: 2px; }
 .composer { padding: 18px 28px 24px; display: grid; grid-template-columns: 1fr auto; gap: 10px; border-top: 1px solid #e8ecef; }
 .composer label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
 .composer textarea { min-width: 0; resize: vertical; padding: 12px; border: 1px solid #cbd4d9; border-radius: 6px; color: #17202a; font: inherit; line-height: 1.5; }
