@@ -66,13 +66,17 @@ export default observer(function Home() {
   const state = useLocalObservable(() => ({
     input: '沈阳和上海天气如何',
     loading: false,
-    threadId: undefined as string | undefined,
+
+    threadId: 'aaa',
     approval: null as { interruptId?: string; toolIds: string[] } | null,
-    messages: [] as UiMessage[]
+    messages: [] as UiMessage[],
+
+    needApproval: false
   }))
 
   // 别删
-  console.log(state.messages)
+  console.log(4)
+  console.log(state.approval)
 
   const consumeStream = async (res: Response) => {
     if (!res.body) throw new Error(await res.text())
@@ -157,13 +161,13 @@ export default observer(function Home() {
           currentAssistantId = undefined
         }
         if (payload.type === 'approval_required') {
+          state.needApproval = true
+
           currentAssistantId = undefined
           const calls = Array.isArray(payload.toolCalls) ? payload.toolCalls : []
           const toolIds: string[] = []
           for (const value of calls) {
-            if (!isRecord(value)) continue
-            const id = typeof value.id === 'string' ? value.id : ''
-            if (!id) continue
+            const id = value.id
             const toolData = ensureTool(id, typeof value.name === 'string' ? value.name : '工具')
             toolData.name = typeof value.name === 'string' ? value.name : toolData.name
             toolData.args = formatValue(value.args)
@@ -217,47 +221,30 @@ export default observer(function Home() {
     if (!text || state.loading || state.approval) return
     state.loading = true
     state.messages.push({ id: `user-${Date.now()}`, type: 'user', content: text })
-    try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, threadId: state.threadId })
-      })
-      await consumeStream(res)
-    } catch (error) {
-      state.messages.push({
-        id: `assistant-${Date.now()}`,
-        type: 'ai',
-        content: `请求失败：${error instanceof Error ? error.message : '请求失败'}`
-      })
-    } finally {
-      state.loading = false
-    }
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text, threadId: state.threadId })
+    })
+    await consumeStream(res)
+
+    state.loading = false
   }
 
   const resolveApproval = async (approved: boolean) => {
+    state.needApproval = false
+
     const approval = state.approval
     if (!approval || !state.threadId || state.loading) return
     state.loading = true
-    try {
-      const res = await fetch('/api/chat/approve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ threadId: state.threadId, approved })
-      })
-      await consumeStream(res)
-    } catch (error) {
-      approval.toolIds.forEach(id => {
-        const toolData = state.messages.find(message => message.type === 'tool' && message.tool_call_id === id)
-        if (toolData) {
-          toolData.status = 'error'
-          toolData.error = error instanceof Error ? error.message : '审批请求失败'
-        }
-      })
-      state.approval = null
-    } finally {
-      state.loading = false
-    }
+    const res = await fetch('/api/chat/approve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ threadId: state.threadId, approved })
+    })
+    await consumeStream(res)
+
+    state.loading = false
   }
 
   return (
@@ -267,6 +254,12 @@ export default observer(function Home() {
           <div>
             <p className="eyebrow">M4 AI AGENT</p>
             <h1>实时工具调用</h1>
+            <button
+              type="button"
+              onClick={() => fetch('/api/chat/getList', { body: JSON.stringify({ threadId: state.threadId }), method: 'POST' })}
+            >
+              get state
+            </button>
           </div>
           <span className="status-dot">{state.loading ? '处理中' : state.approval ? '等待审批' : '就绪'}</span>
         </header>
@@ -295,24 +288,25 @@ export default observer(function Home() {
                       </div>
                     )}
                     {message.error ? <div className="tool-error">{formatValue(message.error)}</div> : null}
-                    {message.status === 'approval_required' && state.approval?.toolIds[0] === message.tool_call_id && (
-                      <div className="tool-actions">
-                        <button type="button" onClick={() => resolveApproval(true)} disabled={state.loading}>
-                          <Check size={15} aria-hidden="true" />
-                          批准执行
-                        </button>
-                        <button type="button" onClick={() => resolveApproval(false)} disabled={state.loading}>
-                          <X size={15} aria-hidden="true" />
-                          拒绝
-                        </button>
-                      </div>
-                    )}
                   </div>
                 )}
               </article>
             )
           })}
         </div>
+        <div></div>
+        {state.needApproval ? (
+          <div className="tool-actions">
+            <button type="button" onClick={() => resolveApproval(true)} disabled={state.loading}>
+              <Check size={15} aria-hidden="true" />
+              批准执行
+            </button>
+            <button type="button" onClick={() => resolveApproval(false)} disabled={state.loading}>
+              <X size={15} aria-hidden="true" />
+              拒绝
+            </button>
+          </div>
+        ) : null}
         <form
           className="composer"
           onSubmit={event => {

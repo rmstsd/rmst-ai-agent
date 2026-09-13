@@ -1,4 +1,5 @@
-import { createResumeCommand, graph, getThreadConfig, State } from '../graph'
+import { Command } from '@langchain/langgraph'
+import { graph, getThreadConfig, State } from '../graph'
 import { createSseResponse } from '../stream'
 
 export async function POST(request: Request) {
@@ -9,10 +10,16 @@ export async function POST(request: Request) {
   }
 
   const config = getThreadConfig(threadId)
-  const streamPromise = graph.stream(createResumeCommand(body.approved), {
-    ...config,
-    streamMode: ['messages', 'tools', 'values']
-  })
+
+  const streamPromise = graph.stream(
+    new Command({
+      resume: { approved: body.approved }
+    }),
+    {
+      ...config,
+      streamMode: ['messages', 'tools', 'values']
+    }
+  )
 
   return createSseResponse(threadId, streamPromise, {
     initialEvents: [{ type: 'approval_resolved', approved: body.approved }]

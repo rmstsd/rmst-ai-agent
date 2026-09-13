@@ -98,9 +98,3 @@ export const graph = new StateGraph(State)
 export function getThreadConfig(threadId: string) {
   return { configurable: { thread_id: threadId } }
 }
-
-export function createResumeCommand(approved: boolean) {
-  return new Command<ApprovalResponse, Record<string, never>, 'tool' | 'callModel' | typeof START>({
-    resume: { approved }
-  })
-}

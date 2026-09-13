@@ -34,7 +34,11 @@ function parseToolCalls(value: unknown) {
   }))
 }
 
-export function createSseResponse(threadId: string, streamPromise: Promise<AsyncIterable<StreamItem>>, options: StreamOptions = {}) {
+export function createSseResponse(
+  threadId: string,
+  streamPromise: Promise<AsyncIterable<StreamItem>>,
+  options: StreamOptions = {}
+) {
   const encoder = new TextEncoder()
 
   const responseStream = new ReadableStream({
@@ -42,8 +46,6 @@ export function createSseResponse(threadId: string, streamPromise: Promise<Async
       const send = (data: SSEData) => {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
       }
-
-      const sentInterruptIds = new Set<string>()
 
       try {
         send({ type: 'thread', threadId })
@@ -62,14 +64,12 @@ export function createSseResponse(threadId: string, streamPromise: Promise<Async
 
             for (const item of interrupts) {
               if (!isRecord(item)) continue
-              const id = typeof item.id === 'string' ? item.id : ''
+              const id = item.id
               const value = isRecord(item.value) ? item.value : {}
               const toolCalls = parseToolCalls(value.toolCalls ?? value.tool_calls)
               if (!toolCalls.length) continue
-              const eventId = id || JSON.stringify(toolCalls)
-              if (sentInterruptIds.has(eventId)) continue
-              sentInterruptIds.add(eventId)
-              send({ type: 'approval_required', interruptId: id || undefined, toolCalls })
+
+              send({ type: 'approval_required', interruptId: id, toolCalls })
             }
           }
 
