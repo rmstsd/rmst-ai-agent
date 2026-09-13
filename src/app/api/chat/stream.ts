@@ -1,23 +1,13 @@
 import { AIMessageChunk } from '@langchain/core/messages'
 import type { ToolCall } from '@langchain/core/messages'
-import type { Interrupt, StreamOutputMap } from '@langchain/langgraph'
+import { INTERRUPT, isInterrupted } from '@langchain/langgraph'
+import type { ApprovalRequest, ChatStreamPromise } from './graph'
 
 type JsonPrimitive = string | number | boolean | null
 type JsonValue = JsonPrimitive | JsonObject | JsonValue[]
 type JsonObject = { [key: string]: JsonValue }
 
 type SSEData = JsonValue | object
-
-type StreamItem = StreamOutputMap<
-  ['messages', 'tools', 'values'],
-  false,
-  Record<string, never>,
-  Record<string, unknown>,
-  string,
-  Record<string, never>,
-  Record<string, never>,
-  undefined
->
 
 type StreamOptions = {
   initialEvents?: SSEData[]
@@ -60,11 +50,7 @@ function parseToolCalls(value: unknown): ParsedToolCall[] {
   }))
 }
 
-export function createSseResponse(
-  threadId: string,
-  streamPromise: Promise<AsyncIterable<StreamItem>>,
-  options: StreamOptions = {}
-) {
+export function createSseResponse(threadId: string, streamPromise: ChatStreamPromise, options: StreamOptions = {}) {
   const encoder = new TextEncoder()
 
   const responseStream = new ReadableStream({
@@ -81,16 +67,16 @@ export function createSseResponse(
         for await (const [mode, payload] of stream) {
           console.log(mode, payload)
           if (mode === 'values') {
-            if (!isRecord(payload)) continue
-            const interrupts = payload.__interrupt__ as Interrupt<Record<string, unknown>>[] | undefined
-            if (!Array.isArray(interrupts)) continue
+            if (!isInterrupted<ApprovalRequest>(payload)) continue
+            const interrupts = payload[INTERRUPT]
 
             for (const item of interrupts) {
               if (!isRecord(item)) continue
               const id = typeof item.id === 'string' ? item.id : ''
               if (!id) continue
-              const value = isRecord(item.value) ? item.value : {}
-              const toolCalls = parseToolCalls(value.toolCalls ?? value.tool_calls)
+              const value = item.value
+              if (!isRecord(value) || value.type !== 'tool_approval') continue
+              const toolCalls = parseToolCalls(value.toolCalls)
               if (!toolCalls.length) continue
 
               send({ type: 'approval_required', interruptId: id, toolCalls })

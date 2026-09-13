@@ -85,7 +85,7 @@ const shouldContinue = (state: State) => {
 }
 
 const State = MessagesAnnotation
-export type State = typeof MessagesAnnotation.State
+type State = typeof MessagesAnnotation.State
 
 export const graph = new StateGraph(State)
   .addNode('callModel', callModel)
@@ -94,6 +94,8 @@ export const graph = new StateGraph(State)
   .addConditionalEdges('callModel', shouldContinue, ['tool', END])
   .addEdge('tool', 'callModel')
   .compile({ checkpointer })
+
+export type ChatStreamPromise = ReturnType<typeof graph.stream<['messages', 'tools', 'values'], false, undefined>>
 
 export function getThreadConfig(threadId: string) {
   return { configurable: { thread_id: threadId } }

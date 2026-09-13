@@ -1,5 +1,5 @@
 import { Command } from '@langchain/langgraph'
-import { graph, getThreadConfig, State } from '../graph'
+import { graph, getThreadConfig } from '../graph'
 import { createSseResponse } from '../stream'
 
 export async function POST(request: Request) {
