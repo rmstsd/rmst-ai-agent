@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     }),
     {
       ...config,
-      streamMode: ['messages', 'tools', 'values']
+      streamMode: ['messages', 'tools', 'updates', 'values', 'tasks']
     }
   )
 

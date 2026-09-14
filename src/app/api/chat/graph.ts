@@ -81,20 +81,22 @@ type State = typeof MessagesAnnotation.State
 
 export const graph = new StateGraph(State)
   .addNode('callModel', callModel)
-  .addNode('rmst-tool', approvalToolNode)
+  .addNode('rmst_tool', approvalToolNode)
   .addEdge(START, 'callModel')
   .addConditionalEdges(
     'callModel',
     state => {
       const lastMessage = state.messages.at(-1)
-      return AIMessage.isInstance(lastMessage) && lastMessage.tool_calls?.length ? 'rmst-tool' : END
+      return AIMessage.isInstance(lastMessage) && lastMessage.tool_calls?.length ? 'rmst_tool' : END
     },
-    ['rmst-tool', END]
+    ['rmst_tool', END]
   )
-  .addEdge('rmst-tool', 'callModel')
+  .addEdge('rmst_tool', 'callModel')
   .compile({ checkpointer })
 
-export type ChatStreamPromise = ReturnType<typeof graph.stream<['messages', 'tools', 'values'], false, undefined>>
+export type ChatStreamPromise = ReturnType<
+  typeof graph.stream<['messages', 'tools', 'updates', 'values', 'tasks'], false, undefined>
+>
 
 export function getThreadConfig(threadId: string) {
   return { configurable: { thread_id: threadId } }

@@ -2,7 +2,7 @@
 
 import { Check, X } from 'lucide-react'
 import { observer, useLocalObservable } from 'mobx-react-lite'
-import type { ChatListResponse, ChatStreamEvent, ToolStatus, UiMessage } from './type'
+import type { ChatListResponse, ChatStreamEvent, ToolStatus, UiMessage, UiToolCall } from './type'
 
 import './page.scss'
 
@@ -30,7 +30,9 @@ function formatValue(value: unknown) {
 }
 
 function toolStatusLabel(status: ToolStatus) {
-  return { pending: '等待调用', rmst_approval_required: '待人工审批', running: '执行中', success: '已完成', error: '失败' }[status]
+  return { pending: '等待调用', rmst_approval_required: '待人工审批', running: '执行中', success: '已完成', error: '失败' }[
+    status
+  ]
 }
 
 export default observer(function Home() {
@@ -74,6 +76,36 @@ export default observer(function Home() {
 
         const payload = JSON.parse(data) as ChatStreamEvent
 
+        const findToolItem = (toolCallId: string) => {
+          for (const msgItem of state.messages) {
+            if (msgItem.type !== 'tool') continue
+
+            for (const toolItem of msgItem.toolCalls ?? []) {
+              if (toolItem.id === toolCallId) return toolItem
+            }
+          }
+        }
+
+        const registerToolCalls = (id: string, toolCalls: UiToolCall[], status: ToolStatus) => {
+          const missingToolCalls: UiToolCall[] = []
+
+          for (const toolCall of toolCalls) {
+            const existingToolCall = findToolItem(toolCall.id)
+            if (existingToolCall) {
+              existingToolCall.name = toolCall.name
+              existingToolCall.args = toolCall.args
+              existingToolCall.status = status
+              continue
+            }
+
+            missingToolCalls.push({ ...toolCall, status })
+          }
+
+          if (missingToolCalls.length > 0) {
+            state.messages.push({ type: 'tool', id, toolCalls: missingToolCalls })
+          }
+        }
+
         if (payload.type === 'thread') {
           state.threadId = payload.threadId
         }
@@ -88,45 +120,25 @@ export default observer(function Home() {
           }
         }
 
-        if (payload.type === 'rmst_approval_required') {
-          state.needApproval = true
-
-          if (payload.toolCalls.length > 0) {
-            state.messages.push({
-              type: 'tool',
-              id: payload.id,
-              toolCalls: payload.toolCalls.map(toolCall => ({
-                ...toolCall,
-                status: 'rmst_approval_required'
-              }))
-            })
-          }
+        if (payload.type === 'tool_calls') {
+          registerToolCalls(payload.id, payload.toolCalls, 'pending')
         }
 
-        const findToolItem = (toolCallId: string) => {
-          let toolAnsItem
-          for (const msgItem of state.messages) {
-            if (msgItem.type !== 'tool') continue
-
-            for (const toolItem of msgItem.toolCalls ?? []) {
-              if (toolItem.id === toolCallId) {
-                toolAnsItem = toolItem
-                break
-              }
-            }
-          }
-
-          return toolAnsItem
+        if (payload.type === 'rmst_approval_required') {
+          state.needApproval = true
+          registerToolCalls(payload.id, payload.toolCalls, 'rmst_approval_required')
         }
 
         if (payload.type === 'tool_start') {
           const toolAnsItem = findToolItem(payload.id)
-          toolAnsItem.status = 'running'
+          if (toolAnsItem) toolAnsItem.status = 'running'
         }
         if (payload.type === 'tool_end') {
           const toolAnsItem = findToolItem(payload.id)
-          toolAnsItem.status = 'success'
-          toolAnsItem.content = formatValue(payload.output)
+          if (toolAnsItem) {
+            toolAnsItem.status = 'success'
+            toolAnsItem.content = formatValue(payload.output)
+          }
         }
 
         if (payload.type === 'error') {

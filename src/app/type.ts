@@ -24,6 +24,7 @@ export type ChatListResponse = {
 export type ChatStreamEvent =
   | { type: 'thread'; threadId: string }
   | { type: 'ai'; id: string; content: unknown }
+  | { type: 'tool_calls'; id: string; toolCalls: UiToolCall[] }
   | { type: 'rmst_approval_required'; id: string; toolCalls: UiToolCall[] }
   | { type: 'tool_start'; id: string }
   | { type: 'tool_end'; id: string; name: string; output: unknown }

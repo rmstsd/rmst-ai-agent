@@ -10,7 +10,7 @@ export async function POST(request: Request) {
 
   const streamPromise = graph.stream(
     { messages: [new HumanMessage(userMessage)] },
-    { ...config, streamMode: ['messages', 'tools', 'values'] }
+    { ...config, streamMode: ['messages', 'tools', 'updates', 'values', 'tasks'] }
   )
 
   return createSseResponse(threadId, streamPromise)

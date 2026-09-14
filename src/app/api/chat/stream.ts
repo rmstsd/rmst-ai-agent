@@ -1,8 +1,8 @@
-import { AIMessageChunk } from '@langchain/core/messages'
+import { AIMessage, AIMessageChunk } from '@langchain/core/messages'
 import type { ToolMessage } from '@langchain/core/messages'
 import { INTERRUPT, isInterrupted } from '@langchain/langgraph'
 import type { ApprovalRequest, ChatStreamPromise } from './graph'
-import type { ChatStreamEvent } from '@/app/type'
+import type { ChatStreamEvent, UiToolCall } from '@/app/type'
 
 export function createSseResponse(threadId: string, streamPromise: ChatStreamPromise) {
   const encoder = new TextEncoder()
@@ -19,10 +19,10 @@ export function createSseResponse(threadId: string, streamPromise: ChatStreamPro
         const stream = await streamPromise
         for await (const [mode, payload] of stream) {
           if (mode === 'values') {
+            // 也可以在 'updates' 里监听中断
             if (!isInterrupted<ApprovalRequest>(payload)) continue
             const interrupts = payload[INTERRUPT]
 
-            console.log('interrupts', interrupts)
             for (const item of interrupts) {
               const value = item.value!
 
@@ -30,8 +30,23 @@ export function createSseResponse(threadId: string, streamPromise: ChatStreamPro
             }
           }
 
+          if (mode === 'updates') {
+            console.log('updates', payload)
+            const lastMessage = payload.callModel?.messages?.at(-1)
+            const toolCallMessage = AIMessage.isInstance(lastMessage) && lastMessage.tool_calls?.length ? lastMessage : null
+
+            if (toolCallMessage) {
+              const toolCalls = (toolCallMessage.tool_calls ?? []).map(toolCall => ({
+                id: toolCall.id!,
+                name: toolCall.name,
+                args: toolCall.args
+              }))
+
+              send({ type: 'tool_calls', id: `tools-${toolCallMessage.id}`, toolCalls })
+            }
+          }
+
           if (mode === 'tools') {
-            console.log('tools', payload)
             if (payload.event === 'on_tool_start') {
               if (!payload.toolCallId) continue
 
@@ -54,7 +69,6 @@ export function createSseResponse(threadId: string, streamPromise: ChatStreamPro
 
           if (mode === 'messages') {
             const [messageChunk] = payload
-            console.log('messageChunk', messageChunk)
             if (AIMessageChunk.isInstance(messageChunk)) {
               if (messageChunk.text && messageChunk.id) {
                 send({
@@ -69,6 +83,7 @@ export function createSseResponse(threadId: string, streamPromise: ChatStreamPro
 
         send({ type: 'done' })
       } catch (error) {
+        console.log('error', error)
         send({ type: 'error', error: error instanceof Error ? error.message : '请求失败' })
       } finally {
         controller.close()
