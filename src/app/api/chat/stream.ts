@@ -26,7 +26,7 @@ export function createSseResponse(threadId: string, streamPromise: ChatStreamPro
             for (const item of interrupts) {
               const value = item.value!
 
-              send({ type: 'approval_required', id: item.id ?? crypto.randomUUID(), toolCalls: value.toolCalls })
+              send({ type: 'rmst_approval_required', id: item.id ?? crypto.randomUUID(), toolCalls: value.toolCalls })
             }
           }
 

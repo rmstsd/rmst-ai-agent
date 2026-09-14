@@ -77,7 +77,7 @@ function mapStateToUiMessages(stateMessages: BaseMessage[], pendingToolCallIds: 
             ? 'error'
             : 'success'
           : pendingToolCallIds.has(toolCallId)
-            ? 'approval_required'
+            ? 'rmst_approval_required'
             : 'pending'
 
         return {

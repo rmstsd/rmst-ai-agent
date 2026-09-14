@@ -30,7 +30,7 @@ function formatValue(value: unknown) {
 }
 
 function toolStatusLabel(status: ToolStatus) {
-  return { pending: '等待调用', approval_required: '待人工审批', running: '执行中', success: '已完成', error: '失败' }[status]
+  return { pending: '等待调用', rmst_approval_required: '待人工审批', running: '执行中', success: '已完成', error: '失败' }[status]
 }
 
 export default observer(function Home() {
@@ -88,7 +88,7 @@ export default observer(function Home() {
           }
         }
 
-        if (payload.type === 'approval_required') {
+        if (payload.type === 'rmst_approval_required') {
           state.needApproval = true
 
           if (payload.toolCalls.length > 0) {
@@ -97,7 +97,7 @@ export default observer(function Home() {
               id: payload.id,
               toolCalls: payload.toolCalls.map(toolCall => ({
                 ...toolCall,
-                status: 'approval_required'
+                status: 'rmst_approval_required'
               }))
             })
           }
@@ -121,14 +121,12 @@ export default observer(function Home() {
 
         if (payload.type === 'tool_start') {
           const toolAnsItem = findToolItem(payload.id)
-          if (toolAnsItem) toolAnsItem.status = 'running'
+          toolAnsItem.status = 'running'
         }
         if (payload.type === 'tool_end') {
           const toolAnsItem = findToolItem(payload.id)
-          if (toolAnsItem) {
-            toolAnsItem.status = 'success'
-            toolAnsItem.content = formatValue(payload.output)
-          }
+          toolAnsItem.status = 'success'
+          toolAnsItem.content = formatValue(payload.output)
         }
 
         if (payload.type === 'error') {
@@ -171,7 +169,7 @@ export default observer(function Home() {
     state.loading = true
     for (const message of state.messages) {
       for (const toolCall of message.toolCalls ?? []) {
-        if (toolCall.status !== 'approval_required') continue
+        if (toolCall.status !== 'rmst_approval_required') continue
 
         toolCall.status = approved ? 'running' : 'error'
         if (!approved) toolCall.error = '工具调用已被人工拒绝'
