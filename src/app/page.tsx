@@ -2,7 +2,7 @@
 
 import { Check, X } from 'lucide-react'
 import { observer, useLocalObservable } from 'mobx-react-lite'
-import { UiMessage } from './type'
+import type { ChatListResponse, ChatStreamEvent, ToolStatus, UiMessage } from './type'
 
 import './page.scss'
 
@@ -19,7 +19,17 @@ function extractText(content: unknown): string {
     .join('')
 }
 
-function toolStatusLabel(status) {
+function formatValue(value: unknown) {
+  if (typeof value === 'string') return value
+
+  try {
+    return JSON.stringify(value, null, 2) ?? String(value)
+  } catch {
+    return String(value)
+  }
+}
+
+function toolStatusLabel(status: ToolStatus) {
   return { pending: '等待调用', approval_required: '待人工审批', running: '执行中', success: '已完成', error: '失败' }[status]
 }
 
@@ -28,16 +38,19 @@ export default observer(function Home() {
     input: '沈阳和上海天气如何',
     loading: false,
 
-    threadId: 'aaabsy',
+    threadId: 'qwer',
     messages: [] as UiMessage[],
 
-    needApproval: false
+    needApproval: false,
+
+    autoExecute: false
   }))
 
   // 别删
   console.log(state.messages)
 
   const consumeStream = async (res: Response) => {
+    if (!res.ok) throw new Error(await res.text())
     if (!res.body) throw new Error(await res.text())
     const reader = res.body.getReader()
     const decoder = new TextDecoder()
@@ -59,7 +72,11 @@ export default observer(function Home() {
 
         if (!data || data === '[DONE]') continue
 
-        const payload = JSON.parse(data) as UiMessage
+        const payload = JSON.parse(data) as ChatStreamEvent
+
+        if (payload.type === 'thread') {
+          state.threadId = payload.threadId
+        }
 
         if (payload.type === 'ai') {
           const messageId = payload.id
@@ -67,29 +84,32 @@ export default observer(function Home() {
           if (!messageItem) {
             state.messages.push({ id: messageId, type: 'ai', content: extractText(payload.content) })
           } else {
-            messageItem.content += extractText(payload.content)
+            messageItem.content = `${messageItem.content ?? ''}${extractText(payload.content)}`
           }
         }
 
         if (payload.type === 'approval_required') {
           state.needApproval = true
 
-          if (payload.toolCalls && Array.isArray(payload.toolCalls) && payload.toolCalls.length > 0) {
+          if (payload.toolCalls.length > 0) {
             state.messages.push({
               type: 'tool',
               id: payload.id,
-              toolCalls: payload.toolCalls
+              toolCalls: payload.toolCalls.map(toolCall => ({
+                ...toolCall,
+                status: 'approval_required'
+              }))
             })
           }
         }
 
-        const findToolItem = () => {
+        const findToolItem = (toolCallId: string) => {
           let toolAnsItem
           for (const msgItem of state.messages) {
             if (msgItem.type !== 'tool') continue
 
-            for (const toolItem of msgItem.toolCalls) {
-              if (toolItem.id === payload.id) {
+            for (const toolItem of msgItem.toolCalls ?? []) {
+              if (toolItem.id === toolCallId) {
                 toolAnsItem = toolItem
                 break
               }
@@ -100,13 +120,23 @@ export default observer(function Home() {
         }
 
         if (payload.type === 'tool_start') {
-          const toolAnsItem = findToolItem()
-          toolAnsItem.status = 'running'
+          const toolAnsItem = findToolItem(payload.id)
+          if (toolAnsItem) toolAnsItem.status = 'running'
         }
         if (payload.type === 'tool_end') {
-          const toolAnsItem = findToolItem()
-          toolAnsItem.status = 'success'
-          toolAnsItem.content = JSON.stringify(payload.output)
+          const toolAnsItem = findToolItem(payload.id)
+          if (toolAnsItem) {
+            toolAnsItem.status = 'success'
+            toolAnsItem.content = formatValue(payload.output)
+          }
+        }
+
+        if (payload.type === 'error') {
+          state.messages.push({
+            id: `error-${Date.now()}`,
+            type: 'ai',
+            content: `请求失败：${formatValue(payload.error)}`
+          })
         }
 
         if (payload.type === 'done') {
@@ -118,42 +148,98 @@ export default observer(function Home() {
 
   const sendMessage = async () => {
     const text = state.input.trim()
-    if (!text || state.loading) return
+    if (!text || state.loading || state.needApproval) return
     state.loading = true
 
-    state.threadId = `thread-${Date.now()}`
     state.messages.push({ id: `user-${Date.now()}`, type: 'user', content: text })
-    const res = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: text, threadId: state.threadId })
-    })
-    await consumeStream(res)
-
-    state.loading = false
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, threadId: state.threadId })
+      })
+      await consumeStream(res)
+    } finally {
+      state.loading = false
+    }
   }
 
   const resolveApproval = async (approved: boolean) => {
-    state.needApproval = false
+    if (state.loading) return
 
-    const res = await fetch('/api/chat/approve', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ threadId: state.threadId, approved })
-    })
-    await consumeStream(res)
+    state.needApproval = false
+    state.loading = true
+    for (const message of state.messages) {
+      for (const toolCall of message.toolCalls ?? []) {
+        if (toolCall.status !== 'approval_required') continue
+
+        toolCall.status = approved ? 'running' : 'error'
+        if (!approved) toolCall.error = '工具调用已被人工拒绝'
+      }
+    }
+
+    try {
+      const res = await fetch('/api/chat/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ threadId: state.threadId, approved })
+      })
+      await consumeStream(res)
+    } finally {
+      state.loading = false
+    }
+  }
+
+  const restoreMessages = async () => {
+    if (!state.threadId.trim() || state.loading) return
+
+    state.loading = true
+    try {
+      const res = await fetch('/api/chat/getList', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ threadId: state.threadId })
+      })
+      if (!res.ok) throw new Error(await res.text())
+
+      const data = (await res.json()) as ChatListResponse
+      state.messages = data.messages
+      state.needApproval = data.needApproval
+    } finally {
+      state.loading = false
+    }
   }
 
   return (
     <main className="chat-page">
       <section className="chat-shell">
         <header className="chat-header">
-          <div>
+          <div className="flex gap-2">
+            <button onClick={restoreMessages} disabled={state.loading}>
+              恢复会话
+            </button>
             <button
-              type="button"
-              onClick={() => fetch('/api/chat/getList', { body: JSON.stringify({ threadId: state.threadId }), method: 'POST' })}
+              onClick={() => {
+                state.threadId = crypto.randomUUID()
+                state.messages = []
+                state.needApproval = false
+              }}
+              disabled={state.loading}
             >
-              get state
+              新会话
+            </button>
+
+            <button
+              onClick={() => {
+                state.autoExecute = !state.autoExecute
+                fetch('/api/chat/autoExecute', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ autoExecute: state.autoExecute })
+                })
+              }}
+            >
+              自动执行 ({String(state.autoExecute)})
             </button>
           </div>
         </header>
@@ -185,6 +271,7 @@ export default observer(function Home() {
                             {item.content}
                           </div>
                         )}
+                        {item.error ? <div className="tool-error">{formatValue(item.error)}</div> : null}
                       </div>
                     )
                   })}
@@ -192,7 +279,7 @@ export default observer(function Home() {
             )
           })}
         </div>
-        <div></div>
+
         {state.needApproval ? (
           <div className="tool-actions">
             <button type="button" onClick={() => resolveApproval(true)} disabled={state.loading}>
@@ -221,7 +308,7 @@ export default observer(function Home() {
             }}
             rows={2}
           />
-          <button type="submit" disabled={state.loading || !state.input.trim()}>
+          <button type="submit" disabled={state.loading || state.needApproval || !state.input.trim()}>
             {state.loading ? '执行中…' : '发送'}
           </button>
         </form>

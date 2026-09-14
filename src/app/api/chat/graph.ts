@@ -2,19 +2,14 @@ import { AIMessage, ToolMessage } from '@langchain/core/messages'
 import { Command, END, MemorySaver, MessagesAnnotation, START, StateGraph, interrupt } from '@langchain/langgraph'
 import { ToolNode } from '@langchain/langgraph/prebuilt'
 import { ChatOpenAI } from '@langchain/openai'
-import { tool } from 'langchain'
+import { tool, ToolCall } from 'langchain'
 import { z } from 'zod'
 import { ChatDeepSeek } from '@langchain/deepseek'
-
-export type ToolCallInfo = {
-  id: string
-  name: string
-  args: unknown
-}
+import { agentAutoExecute } from './autoExecute/route'
 
 export type ApprovalRequest = {
-  type: 'tool_approval'
-  toolCalls: ToolCallInfo[]
+  type: 'rmst-tool_approval'
+  toolCalls: ToolCall[]
 }
 
 export type ApprovalResponse = {
@@ -58,19 +53,23 @@ const approvalToolNode = async (state: State) => {
     return { messages: [] }
   }
 
-  const toolCalls: ToolCallInfo[] = lastMessage.tool_calls.map(call => ({
-    id: call.id ?? '',
-    name: call.name,
-    args: call.args
-  }))
-  const approval = interrupt<ApprovalRequest, ApprovalResponse>({
-    type: 'tool_approval',
-    toolCalls
-  })
+  if (!agentAutoExecute) {
+    const toolCalls = lastMessage.tool_calls.map(call => ({
+      id: call.id ?? '',
+      name: call.name,
+      args: call.args
+    }))
+    const approval = interrupt<ApprovalRequest, ApprovalResponse>({
+      type: 'rmst-tool_approval',
+      toolCalls
+    })
 
-  if (!approval?.approved) {
-    return {
-      messages: toolCalls.map(call => new ToolMessage({ tool_call_id: call.id, content: '工具调用已被人工拒绝' }))
+    if (!approval?.approved) {
+      return {
+        messages: toolCalls.map(
+          call => new ToolMessage({ tool_call_id: call.id, content: '工具调用已被人工拒绝', status: 'error' })
+        )
+      }
     }
   }
 
@@ -82,17 +81,17 @@ type State = typeof MessagesAnnotation.State
 
 export const graph = new StateGraph(State)
   .addNode('callModel', callModel)
-  .addNode('tool', approvalToolNode)
+  .addNode('rmst-tool', approvalToolNode)
   .addEdge(START, 'callModel')
   .addConditionalEdges(
     'callModel',
     state => {
       const lastMessage = state.messages.at(-1)
-      return AIMessage.isInstance(lastMessage) && lastMessage.tool_calls?.length ? 'tool' : END
+      return AIMessage.isInstance(lastMessage) && lastMessage.tool_calls?.length ? 'rmst-tool' : END
     },
-    ['tool', END]
+    ['rmst-tool', END]
   )
-  .addEdge('tool', 'callModel')
+  .addEdge('rmst-tool', 'callModel')
   .compile({ checkpointer })
 
 export type ChatStreamPromise = ReturnType<typeof graph.stream<['messages', 'tools', 'values'], false, undefined>>

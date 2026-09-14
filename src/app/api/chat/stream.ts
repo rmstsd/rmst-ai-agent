@@ -1,15 +1,15 @@
 import { AIMessageChunk } from '@langchain/core/messages'
-import type { ToolCall, ToolMessage } from '@langchain/core/messages'
+import type { ToolMessage } from '@langchain/core/messages'
 import { INTERRUPT, isInterrupted } from '@langchain/langgraph'
 import type { ApprovalRequest, ChatStreamPromise } from './graph'
-import { UiMessage } from '@/app/type'
+import type { ChatStreamEvent } from '@/app/type'
 
 export function createSseResponse(threadId: string, streamPromise: ChatStreamPromise) {
   const encoder = new TextEncoder()
 
   const responseStream = new ReadableStream({
     async start(controller) {
-      const send = (data: UiMessage) => {
+      const send = (data: ChatStreamEvent) => {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
       }
 
@@ -26,18 +26,22 @@ export function createSseResponse(threadId: string, streamPromise: ChatStreamPro
             for (const item of interrupts) {
               const value = item.value!
 
-              send({ type: 'approval_required', id: item.id, toolCalls: value.toolCalls })
+              send({ type: 'approval_required', id: item.id ?? crypto.randomUUID(), toolCalls: value.toolCalls })
             }
           }
 
           if (mode === 'tools') {
             console.log('tools', payload)
             if (payload.event === 'on_tool_start') {
+              if (!payload.toolCallId) continue
+
               send({
                 type: 'tool_start',
                 id: payload.toolCallId
               })
             } else if (payload.event === 'on_tool_end') {
+              if (!payload.toolCallId) continue
+
               const output = payload.output as ToolMessage
               send({
                 type: 'tool_end',
@@ -52,7 +56,7 @@ export function createSseResponse(threadId: string, streamPromise: ChatStreamPro
             const [messageChunk] = payload
             console.log('messageChunk', messageChunk)
             if (AIMessageChunk.isInstance(messageChunk)) {
-              if (messageChunk.text) {
+              if (messageChunk.text && messageChunk.id) {
                 send({
                   id: messageChunk.id,
                   type: 'ai',
