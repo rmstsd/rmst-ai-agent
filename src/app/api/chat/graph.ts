@@ -12,11 +12,11 @@ export type ApprovalRequest = {
   toolCalls: ToolCall[]
 }
 
-export type ApprovalResponse = {
+type ApprovalResponse = {
   approved: boolean
 }
 
-export const checkpointer = new MemorySaver()
+const checkpointer = new MemorySaver()
 
 const model = new ChatDeepSeek({
   apiKey: 'sk-c948ff9124414de5b604aeb0e41e26df',
@@ -28,7 +28,7 @@ const model = new ChatDeepSeek({
   reasoning: { effort: 'none' }
 })
 
-export const getWeather = tool(
+const getWeather = tool(
   async ({ location }) => {
     await new Promise(resolve => setTimeout(resolve, 2000))
     return `当前${location}的天气是晴朗`
