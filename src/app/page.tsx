@@ -2,38 +2,9 @@
 
 import { Check, X } from 'lucide-react'
 import { observer, useLocalObservable } from 'mobx-react-lite'
-import './page.scss'
 import { UiMessage } from './type'
 
-type ToolStatus = NonNullable<UiMessage['status']>
-type SSEPayload = {
-  type: string
-  data?: unknown
-  id?: unknown
-  threadId?: unknown
-  interruptId?: unknown
-  name?: string
-  args?: string
-  input?: unknown
-  output?: unknown
-  error?: unknown
-  approved?: unknown
-  toolCalls?: unknown
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
-}
-
-function formatValue(value: unknown) {
-  if (typeof value === 'string') return value
-  try {
-    const formatted = JSON.stringify(value, null, 2)
-    return formatted === undefined ? String(value) : formatted
-  } catch {
-    return String(value)
-  }
-}
+import './page.scss'
 
 function extractText(content: unknown): string {
   if (typeof content === 'string') return content
@@ -48,17 +19,7 @@ function extractText(content: unknown): string {
     .join('')
 }
 
-function extractToolCalls(value: unknown): UiMessage['tool_calls'] {
-  if (!Array.isArray(value)) return undefined
-  const toolCalls = value.filter(isRecord).map(toolCall => ({
-    id: typeof toolCall.id === 'string' ? toolCall.id : '',
-    name: typeof toolCall.name === 'string' ? toolCall.name : '',
-    args: typeof toolCall.args === 'string' ? toolCall.args : toolCall.args == null ? '' : formatValue(toolCall.args)
-  }))
-  return toolCalls.length > 0 ? toolCalls : undefined
-}
-
-function toolStatusLabel(status: ToolStatus) {
+function toolStatusLabel(status) {
   return { pending: '等待调用', approval_required: '待人工审批', running: '执行中', success: '已完成', error: '失败' }[status]
 }
 
@@ -67,16 +28,14 @@ export default observer(function Home() {
     input: '沈阳和上海天气如何',
     loading: false,
 
-    threadId: 'aaa',
-    approval: null as { interruptId?: string; toolIds: string[] } | null,
+    threadId: 'aaabsy',
     messages: [] as UiMessage[],
 
     needApproval: false
   }))
 
   // 别删
-  console.log(4)
-  console.log(state.approval)
+  console.log(state.messages)
 
   const consumeStream = async (res: Response) => {
     if (!res.body) throw new Error(await res.text())
@@ -84,15 +43,6 @@ export default observer(function Home() {
     const decoder = new TextDecoder()
     let pending = ''
     let finished = false
-    let currentAssistantId: string | undefined
-    const findTool = (id?: string) => state.messages.find(message => message.type === 'tool' && message.tool_call_id === id)
-    const ensureTool = (id: string, name = '工具') => {
-      const existing = findTool(id)
-      if (existing) return existing
-      const message: UiMessage = { id: id, type: 'tool', content: '', tool_call_id: id, name, args: '', status: 'pending' }
-      state.messages.push(message)
-      return state.messages[state.messages.length - 1]
-    }
 
     while (!finished) {
       const { done, value } = await reader.read()
@@ -106,120 +56,72 @@ export default observer(function Home() {
           .find(line => line.startsWith('data:'))
           ?.slice(5)
           .trim()
-        if (!data || data === '[DONE]') continue
-        const payload = JSON.parse(data) as SSEPayload
 
-        if (payload.type === 'thread' && typeof payload.threadId === 'string') {
-          state.threadId = payload.threadId
-        }
+        if (!data || data === '[DONE]') continue
+
+        const payload = JSON.parse(data) as UiMessage
+
         if (payload.type === 'ai') {
-          const chunkData = isRecord(payload.data) ? payload.data : {}
-          const chunkId = typeof chunkData.id === 'string' ? chunkData.id : undefined
-          const messageId = currentAssistantId ?? chunkId ?? `assistant-${Date.now()}`
-          const chunkToolCalls = extractToolCalls(chunkData.tool_calls)
-          if (!currentAssistantId) {
-            currentAssistantId = messageId
-            state.messages.push({
-              id: messageId,
-              type: 'ai',
-              content: extractText(chunkData.content),
-              ...(chunkToolCalls ? { tool_calls: chunkToolCalls } : {})
-            })
+          const messageId = payload.id
+          const messageItem = state.messages.find(item => item.id === messageId)
+          if (!messageItem) {
+            state.messages.push({ id: messageId, type: 'ai', content: extractText(payload.content) })
           } else {
-            const assistant = state.messages.find(message => message.type === 'ai' && message.id === currentAssistantId)
-            if (assistant) {
-              assistant.content += extractText(chunkData.content)
-              if (chunkToolCalls) assistant.tool_calls = chunkToolCalls
-            }
+            messageItem.content += extractText(payload.content)
           }
         }
-        if (payload.type === 'tool_call_start') {
-          const toolData = ensureTool(String(payload.id ?? `unknown-${Date.now()}`), payload.name)
-          toolData.name = payload.name || '工具'
-        }
-        if (payload.type === 'tool_call_args') {
-          const toolData = ensureTool(String(payload.id ?? `unknown-${Date.now()}`))
-          toolData.args = `${toolData.args ?? ''}${payload.args ?? ''}`
-        }
-        if (payload.type === 'tool_start') {
-          const toolData = ensureTool(String(payload.id ?? `unknown-${Date.now()}`), payload.name)
-          toolData.name = payload.name || toolData.name
-          toolData.status = 'running'
-          toolData.input = payload.input
-          toolData.args = formatValue(payload.input)
-        }
-        if (payload.type === 'tool_end') {
-          const toolData = ensureTool(String(payload.id ?? `unknown-${Date.now()}`), payload.name)
-          toolData.status = 'success'
-          toolData.content = formatValue(payload.output)
-          currentAssistantId = undefined
-        }
-        if (payload.type === 'tool_error') {
-          const toolData = ensureTool(String(payload.id ?? `unknown-${Date.now()}`), payload.name)
-          toolData.status = 'error'
-          toolData.error = payload.error
-          currentAssistantId = undefined
-        }
+
         if (payload.type === 'approval_required') {
           state.needApproval = true
 
-          currentAssistantId = undefined
-          const calls = Array.isArray(payload.toolCalls) ? payload.toolCalls : []
-          const toolIds: string[] = []
-          for (const value of calls) {
-            const id = value.id
-            const toolData = ensureTool(id, typeof value.name === 'string' ? value.name : '工具')
-            toolData.name = typeof value.name === 'string' ? value.name : toolData.name
-            toolData.args = formatValue(value.args)
-            toolData.input = value.args
-            toolData.status = 'approval_required'
-            toolIds.push(id)
+          if (payload.toolCalls && Array.isArray(payload.toolCalls) && payload.toolCalls.length > 0) {
+            state.messages.push({
+              type: 'tool',
+              id: payload.id,
+              toolCalls: payload.toolCalls
+            })
           }
-          if (toolIds.length > 0) {
-            state.approval = {
-              interruptId: typeof payload.interruptId === 'string' ? payload.interruptId : undefined,
-              toolIds
+        }
+
+        const findToolItem = () => {
+          let toolAnsItem
+          for (const msgItem of state.messages) {
+            if (msgItem.type !== 'tool') continue
+
+            for (const toolItem of msgItem.toolCalls) {
+              if (toolItem.id === payload.id) {
+                toolAnsItem = toolItem
+                break
+              }
             }
           }
+
+          return toolAnsItem
         }
-        if (payload.type === 'approval_resolved') {
-          currentAssistantId = undefined
-          const approved = payload.approved === true
-          const approval = state.approval
-          if (approval) {
-            approval.toolIds.forEach(id => {
-              const toolData = findTool(id)
-              if (toolData) {
-                toolData.status = approved ? 'running' : 'error'
-                if (!approved) toolData.error = '工具调用已被人工拒绝'
-              }
-            })
-            state.approval = null
-          }
+
+        if (payload.type === 'tool_start') {
+          const toolAnsItem = findToolItem()
+          toolAnsItem.status = 'running'
         }
-        if (payload.type === 'error') {
-          const assistant = currentAssistantId
-            ? state.messages.find(message => message.type === 'ai' && message.id === currentAssistantId)
-            : undefined
-          if (assistant) assistant.content = `请求失败：${formatValue(payload.error)}`
-          else {
-            currentAssistantId = `assistant-${Date.now()}`
-            state.messages.push({
-              id: currentAssistantId,
-              type: 'ai',
-              content: `请求失败：${formatValue(payload.error)}`
-            })
-          }
+        if (payload.type === 'tool_end') {
+          const toolAnsItem = findToolItem()
+          toolAnsItem.status = 'success'
+          toolAnsItem.content = JSON.stringify(payload.output)
         }
-        if (payload.type === 'done') finished = true
+
+        if (payload.type === 'done') {
+          finished = true
+        }
       }
     }
   }
 
   const sendMessage = async () => {
     const text = state.input.trim()
-    if (!text || state.loading || state.approval) return
+    if (!text || state.loading) return
     state.loading = true
+
+    state.threadId = `thread-${Date.now()}`
     state.messages.push({ id: `user-${Date.now()}`, type: 'user', content: text })
     const res = await fetch('/api/chat', {
       method: 'POST',
@@ -234,26 +136,19 @@ export default observer(function Home() {
   const resolveApproval = async (approved: boolean) => {
     state.needApproval = false
 
-    const approval = state.approval
-    if (!approval || !state.threadId || state.loading) return
-    state.loading = true
     const res = await fetch('/api/chat/approve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ threadId: state.threadId, approved })
     })
     await consumeStream(res)
-
-    state.loading = false
   }
 
   return (
     <main className="chat-page">
-      <section className="chat-shell" aria-label="AI 对话">
+      <section className="chat-shell">
         <header className="chat-header">
           <div>
-            <p className="eyebrow">M4 AI AGENT</p>
-            <h1>实时工具调用</h1>
             <button
               type="button"
               onClick={() => fetch('/api/chat/getList', { body: JSON.stringify({ threadId: state.threadId }), method: 'POST' })}
@@ -261,35 +156,38 @@ export default observer(function Home() {
               get state
             </button>
           </div>
-          <span className="status-dot">{state.loading ? '处理中' : state.approval ? '等待审批' : '就绪'}</span>
         </header>
-        <div className="conversation" aria-live="polite">
-          {state.messages.length === 0 && <div className="empty-state">输入问题，查看模型如何调用天气工具。</div>}
+        <div className="conversation">
           {state.messages.map(message => {
             const role = message.type === 'user' ? 'user' : message.type === 'ai' ? 'assistant' : 'tool'
-            const toolStatus = message.status ?? 'pending'
+
             return (
               <article className={`message message-${role}`} key={message.id}>
                 {message.type !== 'tool' && <div className="message-label">{message.type === 'user' ? '你' : '助手'}</div>}
                 {message.type !== 'tool' && (
                   <div className="message-content">{message.content || (state.loading ? '正在思考…' : '')}</div>
                 )}
-                {message.type === 'tool' && (
-                  <div className={`tool-card tool-${toolStatus}`}>
-                    <div className="tool-heading">
-                      <strong>{message.name}</strong>
-                      <span className="tool-status">{toolStatusLabel(toolStatus)}</span>
-                    </div>
-                    {message.args ? <pre>{message.args}</pre> : null}
-                    {toolStatus === 'success' && (
-                      <div className="tool-result">
-                        <span>结果</span>
-                        {message.content}
+
+                {message.type === 'tool' &&
+                  message.toolCalls?.map(item => {
+                    const toolStatus = item.status ?? 'pending'
+
+                    return (
+                      <div className={`tool-card tool-${toolStatus}`} key={item.id}>
+                        <div className="tool-heading">
+                          <strong>{item.name}</strong>
+                          <span className="tool-status">{toolStatusLabel(toolStatus)}</span>
+                        </div>
+                        {item.args ? <pre>{JSON.stringify(item.args)}</pre> : null}
+                        {toolStatus === 'success' && (
+                          <div className="tool-result">
+                            <span>结果</span>
+                            {item.content}
+                          </div>
+                        )}
                       </div>
-                    )}
-                    {message.error ? <div className="tool-error">{formatValue(message.error)}</div> : null}
-                  </div>
-                )}
+                    )
+                  })}
               </article>
             )
           })}
@@ -298,11 +196,11 @@ export default observer(function Home() {
         {state.needApproval ? (
           <div className="tool-actions">
             <button type="button" onClick={() => resolveApproval(true)} disabled={state.loading}>
-              <Check size={15} aria-hidden="true" />
+              <Check size={15} />
               批准执行
             </button>
             <button type="button" onClick={() => resolveApproval(false)} disabled={state.loading}>
-              <X size={15} aria-hidden="true" />
+              <X size={15} />
               拒绝
             </button>
           </div>
@@ -323,7 +221,7 @@ export default observer(function Home() {
             }}
             rows={2}
           />
-          <button type="submit" disabled={state.loading || Boolean(state.approval) || !state.input.trim()}>
+          <button type="submit" disabled={state.loading || !state.input.trim()}>
             {state.loading ? '执行中…' : '发送'}
           </button>
         </form>

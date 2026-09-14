@@ -1,13 +1,8 @@
 export type UiMessage = {
-  id: string
+  id?: string
   type: 'ai' | 'user' | 'tool'
-  content: string
+  content?: string
 
-  tool_calls?: { id: string; name: string; args: string }[]
-  tool_call_id?: string
-  name?: string
-  args?: string
-  status?: 'pending' | 'approval_required' | 'running' | 'success' | 'error'
-  input?: unknown
+  toolCalls?: { id: string; name: string; args: string }[]
   error?: unknown
 }

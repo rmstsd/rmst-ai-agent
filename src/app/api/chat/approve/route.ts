@@ -21,7 +21,5 @@ export async function POST(request: Request) {
     }
   )
 
-  return createSseResponse(threadId, streamPromise, {
-    initialEvents: [{ type: 'approval_resolved', approved: body.approved }]
-  })
+  return createSseResponse(threadId, streamPromise)
 }

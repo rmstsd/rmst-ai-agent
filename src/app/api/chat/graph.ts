@@ -70,18 +70,11 @@ const approvalToolNode = async (state: State) => {
 
   if (!approval?.approved) {
     return {
-      messages: toolCalls.map(
-        call => new ToolMessage({ tool_call_id: call.id, name: call.name, content: '工具调用已被人工拒绝' })
-      )
+      messages: toolCalls.map(call => new ToolMessage({ tool_call_id: call.id, content: '工具调用已被人工拒绝' }))
     }
   }
 
   return toolNode.invoke(state)
-}
-
-const shouldContinue = (state: State) => {
-  const lastMessage = state.messages.at(-1)
-  return AIMessage.isInstance(lastMessage) && lastMessage.tool_calls?.length ? 'tool' : END
 }
 
 const State = MessagesAnnotation
@@ -91,7 +84,14 @@ export const graph = new StateGraph(State)
   .addNode('callModel', callModel)
   .addNode('tool', approvalToolNode)
   .addEdge(START, 'callModel')
-  .addConditionalEdges('callModel', shouldContinue, ['tool', END])
+  .addConditionalEdges(
+    'callModel',
+    state => {
+      const lastMessage = state.messages.at(-1)
+      return AIMessage.isInstance(lastMessage) && lastMessage.tool_calls?.length ? 'tool' : END
+    },
+    ['tool', END]
+  )
   .addEdge('tool', 'callModel')
   .compile({ checkpointer })
 
