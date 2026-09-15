@@ -64,6 +64,16 @@ export function createSseResponse(threadId: string, streamPromise: ChatStreamPro
                 name: payload.name,
                 output: output.content
               })
+            } else if (payload.event === 'on_tool_error') {
+              if (!payload.toolCallId) continue
+
+              const error = payload.error as Error
+              send({
+                type: 'tool_error',
+                id: payload.toolCallId,
+                name: payload.name,
+                error: error.message
+              })
             }
           }
 

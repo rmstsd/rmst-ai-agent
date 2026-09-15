@@ -30,6 +30,10 @@ const model = new ChatDeepSeek({
 
 const getWeather = tool(
   async ({ location }) => {
+    if (location === '上海') {
+      throw new Error('不支持上海')
+    }
+
     await new Promise(resolve => setTimeout(resolve, 2000))
     return `当前${location}的天气是晴朗`
   },

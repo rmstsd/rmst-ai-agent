@@ -28,5 +28,6 @@ export type ChatStreamEvent =
   | { type: 'rmst_approval_required'; id: string; toolCalls: UiToolCall[] }
   | { type: 'tool_start'; id: string }
   | { type: 'tool_end'; id: string; name: string; output: unknown }
+  | { type: 'tool_error'; id: string; name: string; error: unknown }
   | { type: 'done' }
   | { type: 'error'; error: unknown }

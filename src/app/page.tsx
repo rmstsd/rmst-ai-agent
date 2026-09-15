@@ -140,6 +140,13 @@ export default observer(function Home() {
             toolAnsItem.content = formatValue(payload.output)
           }
         }
+        if (payload.type === 'tool_error') {
+          const toolAnsItem = findToolItem(payload.id)
+          if (toolAnsItem) {
+            toolAnsItem.status = 'error'
+            toolAnsItem.error = formatValue(payload.error)
+          }
+        }
 
         if (payload.type === 'error') {
           state.messages.push({
@@ -184,7 +191,9 @@ export default observer(function Home() {
         if (toolCall.status !== 'rmst_approval_required') continue
 
         toolCall.status = approved ? 'running' : 'error'
-        if (!approved) toolCall.error = '工具调用已被人工拒绝'
+        if (!approved) {
+          toolCall.error = '工具调用已被人工拒绝'
+        }
       }
     }
 
