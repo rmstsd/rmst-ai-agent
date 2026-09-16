@@ -230,108 +230,106 @@ export default observer(function Home() {
   }
 
   return (
-    <main className="chat-page">
-      <section className="chat-shell">
-        <header className="chat-header">
-          <div className="flex gap-2">
-            <button onClick={restoreMessages} disabled={state.loading}>
-              恢复会话
-            </button>
-            <button
-              onClick={() => {
-                state.threadId = crypto.randomUUID()
-                state.messages = []
-                state.needApproval = false
-              }}
-              disabled={state.loading}
-            >
-              新会话
-            </button>
-
-            <button
-              onClick={() => {
-                state.autoExecute = !state.autoExecute
-                fetch('/api/chat/autoExecute', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ autoExecute: state.autoExecute })
-                })
-              }}
-            >
-              自动执行 ({String(state.autoExecute)})
-            </button>
-          </div>
-        </header>
-        <div className="conversation">
-          {state.messages.map(message => {
-            const role = message.type === 'user' ? 'user' : message.type === 'ai' ? 'assistant' : 'tool'
-
-            return (
-              <article className={`message message-${role}`} key={message.id}>
-                {message.type !== 'tool' && <div className="message-label">{message.type === 'user' ? '你' : '助手'}</div>}
-                {message.type !== 'tool' && (
-                  <div className="message-content">{message.content || (state.loading ? '正在思考…' : '')}</div>
-                )}
-
-                {message.type === 'tool' &&
-                  message.toolCalls?.map(item => {
-                    const toolStatus = item.status ?? 'pending'
-
-                    return (
-                      <div className={`tool-card tool-${toolStatus}`} key={item.id}>
-                        <div className="tool-heading">
-                          <strong>{item.name}</strong>
-                          <span className="tool-status">{toolStatusLabel(toolStatus)}</span>
-                        </div>
-                        {item.args ? <pre>{JSON.stringify(item.args)}</pre> : null}
-                        {toolStatus === 'success' && (
-                          <div className="tool-result">
-                            <span>结果</span>
-                            {item.content}
-                          </div>
-                        )}
-                        {item.error ? <div className="tool-error">{formatValue(item.error)}</div> : null}
-                      </div>
-                    )
-                  })}
-              </article>
-            )
-          })}
-        </div>
-
-        {state.needApproval ? (
-          <div className="tool-actions">
-            <button type="button" onClick={() => resolveApproval(true)} disabled={state.loading}>
-              <Check size={15} />
-              批准执行
-            </button>
-            <button type="button" onClick={() => resolveApproval(false)} disabled={state.loading}>
-              <X size={15} />
-              拒绝
-            </button>
-          </div>
-        ) : null}
-        <form
-          className="composer"
-          onSubmit={event => {
-            event.preventDefault()
-            sendMessage()
-          }}
-        >
-          <label htmlFor="message">消息</label>
-          <textarea
-            id="message"
-            value={state.input}
-            onChange={event => {
-              state.input = event.target.value
-            }}
-            rows={2}
-          />
-          <button type="submit" disabled={state.loading || state.needApproval || !state.input.trim()}>
-            {state.loading ? '执行中…' : '发送'}
+    <section className="chat-shell">
+      <header className="chat-header">
+        <div className="flex gap-2">
+          <button onClick={restoreMessages} disabled={state.loading}>
+            恢复会话
           </button>
-        </form>
-      </section>
-    </main>
+          <button
+            onClick={() => {
+              state.threadId = crypto.randomUUID()
+              state.messages = []
+              state.needApproval = false
+            }}
+            disabled={state.loading}
+          >
+            新会话
+          </button>
+
+          <button
+            onClick={() => {
+              state.autoExecute = !state.autoExecute
+              fetch('/api/chat/autoExecute', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ autoExecute: state.autoExecute })
+              })
+            }}
+          >
+            自动执行 ({String(state.autoExecute)})
+          </button>
+        </div>
+      </header>
+      <div className="conversation">
+        {state.messages.map(message => {
+          const role = message.type === 'user' ? 'user' : message.type === 'ai' ? 'assistant' : 'tool'
+
+          return (
+            <article className={`message message-${role}`} key={message.id}>
+              {message.type !== 'tool' && <div className="message-label">{message.type === 'user' ? '你' : '助手'}</div>}
+              {message.type !== 'tool' && (
+                <div className="message-content">{message.content || (state.loading ? '正在思考…' : '')}</div>
+              )}
+
+              {message.type === 'tool' &&
+                message.toolCalls?.map(item => {
+                  const toolStatus = item.status ?? 'pending'
+
+                  return (
+                    <div className={`tool-card tool-${toolStatus}`} key={item.id}>
+                      <div className="tool-heading">
+                        <strong>{item.name}</strong>
+                        <span className="tool-status">{toolStatusLabel(toolStatus)}</span>
+                      </div>
+                      {item.args ? <pre>{JSON.stringify(item.args)}</pre> : null}
+                      {toolStatus === 'success' && (
+                        <div className="tool-result">
+                          <span>结果</span>
+                          {item.content}
+                        </div>
+                      )}
+                      {item.error ? <div className="tool-error">{formatValue(item.error)}</div> : null}
+                    </div>
+                  )
+                })}
+            </article>
+          )
+        })}
+      </div>
+
+      {state.needApproval ? (
+        <div className="tool-actions">
+          <button type="button" onClick={() => resolveApproval(true)} disabled={state.loading}>
+            <Check size={15} />
+            批准执行
+          </button>
+          <button type="button" onClick={() => resolveApproval(false)} disabled={state.loading}>
+            <X size={15} />
+            拒绝
+          </button>
+        </div>
+      ) : null}
+      <form
+        className="composer"
+        onSubmit={event => {
+          event.preventDefault()
+          sendMessage()
+        }}
+      >
+        <label htmlFor="message">消息</label>
+        <textarea
+          id="message"
+          value={state.input}
+          onChange={event => {
+            state.input = event.target.value
+          }}
+          rows={2}
+        />
+        <button type="submit" disabled={state.loading || state.needApproval || !state.input.trim()}>
+          {state.loading ? '执行中…' : '发送'}
+        </button>
+      </form>
+    </section>
   )
 })
