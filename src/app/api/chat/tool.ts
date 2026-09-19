@@ -17,6 +17,11 @@ export class ToolCallError extends Error {
 const getWeather = tool(
   async ({ location }, runtime) => {
     console.log('runtime', runtime)
+
+    runtime.signal.addEventListener('abort', () => {
+      console.log('Tool call aborted')
+    })
+
     if (location === '上海') {
       throw new ToolCallError('不支持上海')
     }

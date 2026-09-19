@@ -229,6 +229,14 @@ export default observer(function Home() {
     }
   }
 
+  const cancelCall = async () => {
+    const res = await fetch('/api/chat/cancel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ threadId: state.threadId })
+    })
+  }
+
   return (
     <section className="chat-shell">
       <header className="chat-header">
@@ -326,9 +334,13 @@ export default observer(function Home() {
           }}
           rows={2}
         />
-        <button type="submit" disabled={state.loading || state.needApproval || !state.input.trim()}>
-          {state.loading ? '执行中…' : '发送'}
-        </button>
+
+        <div className="sb-action">
+          <button type="submit" disabled={state.loading || state.needApproval || !state.input.trim()}>
+            {state.loading ? '执行中…' : '发送'}
+          </button>
+          <button onClick={cancelCall}>取消</button>
+        </div>
       </form>
     </section>
   )

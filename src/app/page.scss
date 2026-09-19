@@ -215,3 +215,9 @@
   outline: 3px solid rgba(8, 127, 140, 0.3);
   outline-offset: 2px;
 }
+
+.sb-action {
+  display: flex;
+  gap: 8px;
+  flex-direction: column;
+}
