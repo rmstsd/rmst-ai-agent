@@ -32,7 +32,8 @@ export function createSseResponse(threadId: string, streamPromise: ChatStreamPro
 
           if (mode === 'updates') {
             console.log('updates', payload)
-            const lastMessage = payload.callModel?.messages?.at(-1)
+            const messages = payload.callModel?.messages
+            const lastMessage = Array.isArray(messages) ? messages.at(-1) : undefined
             const toolCallMessage = AIMessage.isInstance(lastMessage) && lastMessage.tool_calls?.length ? lastMessage : null
 
             if (toolCallMessage) {
@@ -58,6 +59,7 @@ export function createSseResponse(threadId: string, streamPromise: ChatStreamPro
               if (!payload.toolCallId) continue
 
               const output = payload.output as ToolMessage
+
               send({
                 type: 'tool_end',
                 id: payload.toolCallId,

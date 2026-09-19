@@ -9,7 +9,7 @@
   overflow: hidden;
 }
 .chat-header {
-  padding: 16px;
+  padding: 8px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -34,7 +34,7 @@
 }
 .conversation {
   flex: 1;
-  padding: 28px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -67,23 +67,25 @@
 }
 .message-content {
   padding: 12px 15px;
-  border-radius: 8px;
   background: #eef2f4;
   line-height: 1.6;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 .message-tool {
+  min-width: 300px;
   max-width: 88%;
-  padding: 10px;
-  border: 1px solid #cbd8dd;
-  align-self: flex-start;
-}
-.tool-card {
   padding: 8px;
   border: 1px solid #cbd8dd;
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tool-card {
+  padding: 4px;
+  border: 1px solid #cbd8dd;
   border-left: 3px solid #8ca4ad;
-  border-radius: 6px;
   background: #f8fafb;
   font-size: 13px;
 }
@@ -113,21 +115,18 @@
   color: #687681;
 }
 .tool-card pre {
-  margin: 12px 0 0;
-  padding: 10px;
-  border-radius: 4px;
+  margin: 4px 0 0;
+  padding: 4px;
   background: #edf1f3;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 .tool-result,
 .tool-error {
-  margin-top: 10px;
-  line-height: 1.5;
   overflow-wrap: anywhere;
 }
 .tool-result span {
-  margin-right: 8px;
+  margin-right: 4px;
   color: #2c8c62;
   font-weight: 700;
 }
@@ -138,7 +137,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 12px;
   padding: 12px;
 }
 .tool-actions button {
@@ -148,7 +146,6 @@
   min-height: 32px;
   padding: 0 10px;
   border: 1px solid #087f8c;
-  border-radius: 4px;
   background: #087f8c;
   color: #fff;
   cursor: pointer;
@@ -187,10 +184,9 @@
 }
 .composer textarea {
   min-width: 0;
-  resize: vertical;
+  resize: none;
   padding: 12px;
   border: 1px solid #cbd4d9;
-  border-radius: 6px;
   color: #17202a;
   font: inherit;
   line-height: 1.5;
@@ -205,7 +201,6 @@
   min-height: 44px;
   padding: 0 18px;
   border: 0;
-  border-radius: 6px;
   background: #087f8c;
   color: #fff;
   cursor: pointer;

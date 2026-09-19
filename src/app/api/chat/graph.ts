@@ -1,22 +1,25 @@
-import { AIMessage, ToolMessage } from '@langchain/core/messages'
-import { Command, END, GraphNode, MemorySaver, MessagesAnnotation, START, StateGraph, interrupt } from '@langchain/langgraph'
-import { ToolNode } from '@langchain/langgraph/prebuilt'
-import { ChatOpenAI } from '@langchain/openai'
-import { Tool, tool, ToolCall } from 'langchain'
-import { z } from 'zod'
+import { AIMessage, ToolMessage, type ToolCall } from '@langchain/core/messages'
+import { Command, END, type GraphNode, MemorySaver, MessagesAnnotation, START, StateGraph, interrupt } from '@langchain/langgraph'
+
 import { ChatDeepSeek } from '@langchain/deepseek'
 import { agentAutoExecute } from './autoExecute/route'
+import { executeToolsNode, tools } from './tool'
 
 export type ApprovalRequest = {
   type: 'rmst-tool_approval'
-  toolCalls: ToolCall[]
+  toolCalls: ApprovalToolCall[]
 }
+
+type ApprovalToolCall = Pick<ToolCall, 'args' | 'name'> & { id: string }
 
 type ApprovalResponse = {
   approved: boolean
 }
 
 const checkpointer = new MemorySaver()
+const State = MessagesAnnotation
+
+export type State = typeof MessagesAnnotation.State
 
 const model = new ChatDeepSeek({
   apiKey: 'sk-c948ff9124414de5b604aeb0e41e26df',
@@ -27,37 +30,20 @@ const model = new ChatDeepSeek({
   streaming: true,
   reasoning: { effort: 'none' }
 })
+const modelWithTools = model.bindTools(tools)
 
-const getWeather = tool(
-  async ({ location }) => {
-    if (location === '上海') {
-      throw new Error('不支持上海')
-    }
-
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    return `当前${location}的天气是晴朗`
-  },
-  {
-    name: 'get_weather',
-    description: '获取天气信息',
-    schema: z.object({ location: z.string().describe('城市名称') })
-  }
-)
-
-const modelWithTools = model.bindTools([getWeather])
-
-const callModel: GraphNode<State> = async (state: State) => ({
+const callModelNode: GraphNode<typeof State> = async state => ({
   messages: [await modelWithTools.invoke(state.messages)]
 })
 
-const State = MessagesAnnotation
-type State = typeof MessagesAnnotation.State
-
-const approvalNode: GraphNode<State> = async state => {
-  const lastMessage = state.messages.at(-1) as AIMessage
+const approvalNode: GraphNode<typeof State> = async state => {
+  const lastMessage = state.messages.at(-1)
+  if (!AIMessage.isInstance(lastMessage) || !lastMessage.tool_calls?.length) {
+    return new Command({ goto: END })
+  }
 
   if (!agentAutoExecute) {
-    const toolCalls = (lastMessage.tool_calls ?? []).map(call => ({
+    const toolCalls = lastMessage.tool_calls.map(call => ({
       id: call.id ?? '',
       name: call.name,
       args: call.args
@@ -83,35 +69,8 @@ const approvalNode: GraphNode<State> = async state => {
 }
 
 export const graph = new StateGraph(State)
-  .addNode('callModel', callModel)
-  .addNode('rmst_tool', new ToolNode([getWeather], { handleToolErrors: false }), {
-    retryPolicy: {
-      maxAttempts: 3,
-      retryOn: error => {
-        console.log(1)
-        return error instanceof Error
-      }
-    },
-    errorHandler: (state: State, nodeError) => {
-      console.log('nodeError', nodeError)
-      const lastMessage = state.messages.at(-1) as AIMessage
-
-      return new Command({
-        goto: 'callModel',
-        update: {
-          messages: (lastMessage.tool_calls ?? []).map(
-            item =>
-              new ToolMessage({
-                tool_call_id: item.id ?? '',
-                name: item.name,
-                content: '工具调用失败 aa',
-                status: 'error'
-              })
-          )
-        }
-      })
-    }
-  })
+  .addNode('callModel', callModelNode)
+  .addNode('rmst_tool', executeToolsNode)
   .addNode('rmst_approval_node', approvalNode, {
     ends: ['rmst_tool', 'callModel', END]
   })

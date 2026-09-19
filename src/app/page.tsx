@@ -37,7 +37,7 @@ function toolStatusLabel(status: ToolStatus) {
 
 export default observer(function Home() {
   const state = useLocalObservable(() => ({
-    input: '沈阳和上海天气如何',
+    input: '沈阳, 上海, 北京 天气如何',
     loading: false,
 
     threadId: 'qwer',
