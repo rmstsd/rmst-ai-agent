@@ -2,6 +2,7 @@
 
 import { Check, X } from 'lucide-react'
 import { observer, useLocalObservable } from 'mobx-react-lite'
+import { useRef } from 'react'
 import type { ChatListResponse, ChatStreamEvent, ToolStatus, UiMessage, UiToolCall } from './type'
 
 import './page.scss'
@@ -36,6 +37,7 @@ function toolStatusLabel(status: ToolStatus) {
 }
 
 export default observer(function Home() {
+  const requestControllerRef = useRef<AbortController | null>(null)
   const state = useLocalObservable(() => ({
     input: '沈阳, 上海, 北京 天气如何',
     loading: false,
@@ -45,7 +47,9 @@ export default observer(function Home() {
 
     needApproval: false,
 
-    autoExecute: false
+    autoExecute: false,
+
+    cancelling: false
   }))
 
   // 别删
@@ -165,24 +169,32 @@ export default observer(function Home() {
 
   const sendMessage = async () => {
     const text = state.input.trim()
-    if (!text || state.loading || state.needApproval) return
+    if (!text || state.loading || state.cancelling || state.needApproval) return
     state.loading = true
 
     state.messages.push({ id: `user-${Date.now()}`, type: 'user', content: text })
+    const requestController = new AbortController()
+    requestControllerRef.current = requestController
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, threadId: state.threadId })
+        body: JSON.stringify({ message: text, threadId: state.threadId }),
+        signal: requestController.signal
       })
       await consumeStream(res)
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === 'AbortError')) throw error
     } finally {
-      state.loading = false
+      if (requestControllerRef.current === requestController) {
+        requestControllerRef.current = null
+        state.loading = false
+      }
     }
   }
 
   const resolveApproval = async (approved: boolean) => {
-    if (state.loading) return
+    if (state.loading || state.cancelling) return
 
     state.needApproval = false
     state.loading = true
@@ -197,20 +209,28 @@ export default observer(function Home() {
       }
     }
 
+    const requestController = new AbortController()
+    requestControllerRef.current = requestController
     try {
       const res = await fetch('/api/chat/approve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ threadId: state.threadId, approved })
+        body: JSON.stringify({ threadId: state.threadId, approved }),
+        signal: requestController.signal
       })
       await consumeStream(res)
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === 'AbortError')) throw error
     } finally {
-      state.loading = false
+      if (requestControllerRef.current === requestController) {
+        requestControllerRef.current = null
+        state.loading = false
+      }
     }
   }
 
   const restoreMessages = async () => {
-    if (!state.threadId.trim() || state.loading) return
+    if (!state.threadId.trim() || state.loading || state.cancelling) return
 
     state.loading = true
     try {
@@ -230,11 +250,21 @@ export default observer(function Home() {
   }
 
   const cancelCall = async () => {
-    const res = await fetch('/api/chat/cancel', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ threadId: state.threadId })
-    })
+    if (!state.loading || state.cancelling) return
+
+    state.cancelling = true
+    requestControllerRef.current?.abort()
+    try {
+      await fetch('/api/chat/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ threadId: state.threadId })
+      })
+    } finally {
+      requestControllerRef.current = null
+      state.loading = false
+      state.cancelling = false
+    }
   }
 
   return (
@@ -336,10 +366,12 @@ export default observer(function Home() {
         />
 
         <div className="sb-action">
-          <button type="submit" disabled={state.loading || state.needApproval || !state.input.trim()}>
+          <button type="submit" disabled={state.loading || state.cancelling || state.needApproval || !state.input.trim()}>
             {state.loading ? '执行中…' : '发送'}
           </button>
-          <button onClick={cancelCall}>取消</button>
+          <button type="button" onClick={cancelCall} disabled={!state.loading || state.cancelling}>
+            {state.cancelling ? '取消中…' : '取消'}
+          </button>
         </div>
       </form>
     </section>

@@ -32,8 +32,8 @@ const model = new ChatDeepSeek({
 })
 const modelWithTools = model.bindTools(tools)
 
-const callModelNode: GraphNode<typeof State> = async state => ({
-  messages: [await modelWithTools.invoke(state.messages)]
+const callModelNode: GraphNode<typeof State> = async (state, config) => ({
+  messages: [await modelWithTools.invoke(state.messages, config)]
 })
 
 const approvalNode: GraphNode<typeof State> = async state => {

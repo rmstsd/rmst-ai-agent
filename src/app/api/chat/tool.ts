@@ -56,11 +56,11 @@ export const executeToolsNode: GraphNode<State> = async (state, config) => {
   }
 
   return {
-    messages: await Promise.all(lastMessage.tool_calls.map(toolCall => executeToolCall(toolCall, state, config)))
+    messages: await Promise.all(lastMessage.tool_calls.map(toolCall => executeToolCall(toolCall, config)))
   }
 }
 
-async function executeToolCall(toolCall: ToolCall, state: State, config: LangGraphRunnableConfig): Promise<ToolMessage> {
+async function executeToolCall(toolCall: ToolCall, config: LangGraphRunnableConfig): Promise<ToolMessage> {
   const currentTool = toolsByName.get(toolCall.name)
   if (!currentTool) {
     return createToolErrorMessage(toolCall, `Tool "${toolCall.name}" not found.`)
@@ -68,7 +68,7 @@ async function executeToolCall(toolCall: ToolCall, state: State, config: LangGra
 
   for (let attempt = 1; attempt <= maxToolAttempts; attempt += 1) {
     try {
-      const output = await currentTool.invoke(toolCall)
+      const output = await currentTool.invoke(toolCall, config)
       return ToolMessage.isInstance(output) ? output : createToolSuccessMessage(toolCall, output)
     } catch (error) {
       if (!(error instanceof ToolCallError) || !error.retryable || attempt === maxToolAttempts) {

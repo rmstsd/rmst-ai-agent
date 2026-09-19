@@ -1,6 +1,4 @@
-import { Command } from '@langchain/langgraph'
-import { graph, getThreadConfig } from '../graph'
-import { createSseResponse } from '../stream'
+import { cancelExecution } from '../execution'
 
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as { threadId?: string }
@@ -9,7 +7,5 @@ export async function POST(request: Request) {
     return Response.json({ error: 'threadId 参数必填' }, { status: 400 })
   }
 
-  const config = getThreadConfig(threadId)
-
-  return createSseResponse(threadId, streamPromise)
+  return Response.json({ cancelled: cancelExecution(threadId) })
 }

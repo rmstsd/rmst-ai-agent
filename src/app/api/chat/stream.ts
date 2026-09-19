@@ -2,9 +2,14 @@ import { AIMessage, AIMessageChunk } from '@langchain/core/messages'
 import type { ToolMessage } from '@langchain/core/messages'
 import { INTERRUPT, isInterrupted } from '@langchain/langgraph'
 import type { ApprovalRequest, ChatStreamPromise } from './graph'
-import type { ChatStreamEvent, UiToolCall } from '@/app/type'
+import type { ChatStreamEvent } from '@/app/type'
 
-export function createSseResponse(threadId: string, streamPromise: ChatStreamPromise) {
+export function createSseResponse(
+  threadId: string,
+  streamPromise: ChatStreamPromise,
+  signal?: AbortSignal,
+  onClose?: () => void
+) {
   const encoder = new TextEncoder()
 
   const responseStream = new ReadableStream({
@@ -96,9 +101,16 @@ export function createSseResponse(threadId: string, streamPromise: ChatStreamPro
         send({ type: 'done' })
       } catch (error) {
         console.log('error', error)
-        send({ type: 'error', error: error instanceof Error ? error.message : '请求失败' })
+        if (!signal?.aborted && !(error instanceof Error && error.name === 'AbortError')) {
+          send({ type: 'error', error: error instanceof Error ? error.message : '请求失败' })
+        }
       } finally {
-        controller.close()
+        onClose?.()
+        try {
+          controller.close()
+        } catch {
+          // 客户端取消读取时，流可能已经关闭。
+        }
       }
     }
   })

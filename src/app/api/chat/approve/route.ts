@@ -1,4 +1,5 @@
 import { Command } from '@langchain/langgraph'
+import { startExecution } from '../execution'
 import { graph, getThreadConfig } from '../graph'
 import { createSseResponse } from '../stream'
 
@@ -10,6 +11,7 @@ export async function POST(request: Request) {
   }
 
   const config = getThreadConfig(threadId)
+  const execution = startExecution(threadId, request.signal)
 
   const streamPromise = graph.stream(
     new Command({
@@ -17,9 +19,10 @@ export async function POST(request: Request) {
     }),
     {
       ...config,
+      signal: execution.signal,
       streamMode: ['messages', 'tools', 'updates', 'values', 'tasks']
     }
   )
 
-  return createSseResponse(threadId, streamPromise)
+  return createSseResponse(threadId, streamPromise, execution.signal, execution.release)
 }

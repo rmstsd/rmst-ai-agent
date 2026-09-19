@@ -1,4 +1,5 @@
 import { HumanMessage } from '@langchain/core/messages'
+import { startExecution } from './execution'
 import { graph, getThreadConfig } from './graph'
 import { createSseResponse } from './stream'
 
@@ -7,11 +8,15 @@ export async function POST(request: Request) {
   const userMessage = body.message?.trim() || '沈阳和上海天气如何'
   const threadId = body.threadId?.trim() || crypto.randomUUID()
   const config = getThreadConfig(threadId)
+  const execution = startExecution(threadId, request.signal)
 
   const streamPromise = graph.stream(
     { messages: [new HumanMessage(userMessage)] },
-    { ...config, streamMode: ['messages', 'tools', 'updates', 'values', 'tasks'] }
+    { ...config, signal: execution.signal, streamMode: ['messages', 'tools', 'updates', 'values', 'tasks'] }
   )
 
-  return createSseResponse(threadId, streamPromise)
+  //  const s =  await streamPromise
+  //  s.cancel()
+
+  return createSseResponse(threadId, streamPromise, execution.signal, execution.release)
 }
